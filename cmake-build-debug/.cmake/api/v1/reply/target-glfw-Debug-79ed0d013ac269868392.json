@@ -26,6 +26,7 @@
 		[
 			"C:/Users/david/.vcpkg-clion/vcpkg/scripts/buildsystems/vcpkg.cmake",
 			"external/glfw-3.1.2/src/CMakeLists.txt",
+			"external/glfw-3.1.2/CMakeLists.txt",
 			"external/CMakeLists.txt"
 		],
 		"nodes" : 
@@ -52,19 +53,28 @@
 				"parent" : 0
 			},
 			{
+				"file" : 2
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 167,
+				"parent" : 4
+			},
+			{
 				"command" : 3,
 				"file" : 1,
 				"line" : 6,
 				"parent" : 0
 			},
 			{
-				"file" : 2
+				"file" : 3
 			},
 			{
 				"command" : 4,
-				"file" : 2,
+				"file" : 3,
 				"line" : 9,
-				"parent" : 5
+				"parent" : 7
 			},
 			{
 				"command" : 4,
@@ -86,13 +96,15 @@
 			"defines" : 
 			[
 				{
+					"backtrace" : 5,
 					"define" : "UNICODE"
 				},
 				{
+					"backtrace" : 5,
 					"define" : "WINVER=0x0501"
 				},
 				{
-					"backtrace" : 4,
+					"backtrace" : 6,
 					"define" : "_GLFW_USE_CONFIG_H"
 				},
 				{
@@ -102,15 +114,15 @@
 			"includes" : 
 			[
 				{
-					"backtrace" : 6,
+					"backtrace" : 8,
 					"path" : "C:/CG/lab2/external/glad-3.3/include"
 				},
 				{
-					"backtrace" : 7,
+					"backtrace" : 9,
 					"path" : "C:/CG/lab2/external/glfw-3.1.2/src"
 				},
 				{
-					"backtrace" : 7,
+					"backtrace" : 9,
 					"path" : "C:/CG/lab2/cmake-build-debug/external/glfw-3.1.2/src"
 				}
 			],

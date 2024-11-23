@@ -2,10 +2,10 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "lab2_skybox.exe"
+			"path" : "lab2_building.exe"
 		},
 		{
-			"path" : "lab2_skybox.pdb"
+			"path" : "lab2_building.pdb"
 		}
 	],
 	"backtrace" : 2,
@@ -31,7 +31,7 @@
 			{
 				"command" : 1,
 				"file" : 1,
-				"line" : 39,
+				"line" : 32,
 				"parent" : 0
 			},
 			{
@@ -43,13 +43,13 @@
 			{
 				"command" : 2,
 				"file" : 1,
-				"line" : 45,
+				"line" : 43,
 				"parent" : 0
 			},
 			{
 				"command" : 3,
 				"file" : 1,
-				"line" : 13,
+				"line" : 18,
 				"parent" : 0
 			}
 		]
@@ -79,6 +79,10 @@
 				},
 				{
 					"backtrace" : 4,
+					"path" : "C:/CG/lab2/external/tinyobjloader"
+				},
+				{
+					"backtrace" : 4,
 					"path" : "C:/CG/lab2/external"
 				},
 				{
@@ -102,6 +106,10 @@
 	[
 		{
 			"backtrace" : 3,
+			"id" : "tinyobjloader::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 3,
 			"id" : "glad::@df5e3ce796715454c4bb"
 		},
 		{
@@ -109,7 +117,7 @@
 			"id" : "glfw::@160694664b387c03da1c"
 		}
 	],
-	"id" : "lab2_skybox::@6890427a1f51a3e7e1df",
+	"id" : "lab2_building::@6890427a1f51a3e7e1df",
 	"link" : 
 	{
 		"commandFragments" : 
@@ -144,6 +152,11 @@
 			},
 			{
 				"backtrace" : 3,
+				"fragment" : "libtinyobjloader.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 3,
 				"fragment" : "-lopengl32",
 				"role" : "libraries"
 			},
@@ -154,8 +167,8 @@
 		],
 		"language" : "CXX"
 	},
-	"name" : "lab2_skybox",
-	"nameOnDisk" : "lab2_skybox.exe",
+	"name" : "lab2_building",
+	"nameOnDisk" : "lab2_building.exe",
 	"paths" : 
 	{
 		"build" : ".",
@@ -170,6 +183,17 @@
 				0,
 				1
 			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				2,
+				3,
+				4,
+				5,
+				6
+			]
 		}
 	],
 	"sources" : 
@@ -177,7 +201,7 @@
 		{
 			"backtrace" : 2,
 			"compileGroupIndex" : 0,
-			"path" : "lab2/lab2_skybox.cpp",
+			"path" : "lab2/lab2_building.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
@@ -185,6 +209,31 @@
 			"compileGroupIndex" : 0,
 			"path" : "lab2/render/shader.cpp",
 			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"path" : "lab2/Sky.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "lab2/building.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "lab2/city.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "lab2/ground.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "lab2/model1.h",
+			"sourceGroupIndex" : 1
 		}
 	],
 	"type" : "EXECUTABLE"

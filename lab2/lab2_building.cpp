@@ -13,7 +13,9 @@
 #include <ctime>
 
 #include <render/shader.h>
-
+#include "model1.h"
+#include <fstream>
+#include <sstream>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
@@ -28,11 +30,12 @@
 
 
 
+
 static GLFWwindow *window;
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
 
 // OpenGL camera view parameters
-static glm::vec3 eye_center(300.0f, 300.0f, 300.0f); // Position the camera inside the cube
+static glm::vec3 eye_center(0.0f, 0.0f, 0.0f); // Position the camera inside the cube
 static glm::vec3 lookat(0, 1, 1);
 static glm::vec3 up(0, 1, 0);
 
@@ -114,7 +117,9 @@ int main(void)
 	Sky sky;
 	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(500.0f, 500.0f, 500.0f), skyTexturePaths);
 
-
+	ModelOBJ model;
+	model.initialize("../lab2/models/Futuristic_Car_2.1_obj.obj",
+					glm::vec3(0.0f), glm::vec3(10.0f));
 
 
 	// Camera setup
@@ -132,20 +137,22 @@ int main(void)
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
+		//print camera lookat
+		std::cout << "lookat: " << lookat.x << " " << lookat.y << " " << lookat.z << std::endl;
 		viewMatrix = glm::lookAt(eye_center, lookat, up);
 		glm::mat4 vp = projectionMatrix * viewMatrix;
 
 		viewMatrixSky = glm::mat4(glm::mat3(viewMatrix)); // Remove translation
 		glm::mat4 vpSky = projectionMatrix * viewMatrixSky;
-		sky.render(vpSky);
+		//sky.render(vpSky);
 
 		currentTime = glfwGetTime();
 
 
 		// Render the building
-		city.update(eye_center);
-		city.render(vp, viewMatrix, projectionMatrix, eye_center);
+		//city.update(eye_center);
+		//city.render(vp, viewMatrix, projectionMatrix, eye_center);
+		model.render(vp, eye_center);
 
 
 		// Swap buffers

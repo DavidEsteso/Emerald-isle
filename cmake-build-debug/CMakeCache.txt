@@ -340,6 +340,9 @@ Z_VCPKG_PWSH_PATH:FILEPATH=Z_VCPKG_PWSH_PATH-NOTFOUND
 // triplet
 _VCPKG_INSTALLED_DIR:PATH=C:/Users/david/.vcpkg-clion/vcpkg/installed
 
+//The directory containing a CMake configuration file for assimp.
+assimp_DIR:PATH=C:/Users/david/.vcpkg-clion/vcpkg/installed/x64-mingw-dynamic/share/assimp
+
 //Value Computed by CMake
 glad_BINARY_DIR:STATIC=C:/CG/lab2/cmake-build-debug/external/glad-3.3
 

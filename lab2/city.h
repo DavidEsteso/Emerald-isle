@@ -26,6 +26,7 @@
 
 #include <building.h>
 #include <ground.h>
+#include <model1.h>
 
 
 
@@ -188,7 +189,7 @@ struct InfiniteCity {
 	void render(glm::mat4 vp, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, glm::vec3 eye) {
     	for (auto& chunk : chunks) {
     		// Render ground first
-    		//chunk.second.second.render(vp);
+    		chunk.second.second.render(vp);
     		// Then render buildings
     		for (auto& building : chunk.second.first) {
     			building.render(vp, viewMatrix, projectionMatrix, eye);

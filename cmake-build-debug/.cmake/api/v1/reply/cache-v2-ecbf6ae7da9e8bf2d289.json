@@ -1778,6 +1778,18 @@
 			"value" : "C:/Users/david/.vcpkg-clion/vcpkg/installed"
 		},
 		{
+			"name" : "assimp_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "The directory containing a CMake configuration file for assimp."
+				}
+			],
+			"type" : "PATH",
+			"value" : "C:/Users/david/.vcpkg-clion/vcpkg/installed/x64-mingw-dynamic/share/assimp"
+		},
+		{
 			"name" : "glad_BINARY_DIR",
 			"properties" : 
 			[
