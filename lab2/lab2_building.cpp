@@ -1,6 +1,7 @@
 
-#include <building.h>
 #include <sky.h>
+#include <city.h>
+
 
 
 #include <glad/gl.h>
@@ -31,11 +32,11 @@ static GLFWwindow *window;
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
 
 // OpenGL camera view parameters
-static glm::vec3 eye_center(0.0f, 0.0f, 0.0f); // Position the camera inside the cube
+static glm::vec3 eye_center(300.0f, 300.0f, 300.0f); // Position the camera inside the cube
 static glm::vec3 lookat(0, 1, 1);
 static glm::vec3 up(0, 1, 0);
 
-// View control 
+// View control
 float viewPolar = glm::radians(60.0f);
 float viewAzimuth = glm::radians(45.0f);
 static float viewDistance = 400.0f;
@@ -105,10 +106,10 @@ int main(void)
 	float height = 80.0f;
 
 
-	Building building;
-	building.position = glm::vec3(0.0f, 0.0f, 0.0f);
-	building.scale = glm::vec3(width, height, depth);
-	building.initialize(building.position, building.scale, "../lab2/textures/cube");
+    InfiniteCity city;
+	float currentTime = 0.0f;
+
+
 
 	Sky sky;
 	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(500.0f, 500.0f, 500.0f), skyTexturePaths);
@@ -139,7 +140,12 @@ int main(void)
 		glm::mat4 vpSky = projectionMatrix * viewMatrixSky;
 		sky.render(vpSky);
 
-		building.render(vp, viewMatrix, projectionMatrix, eye_center);
+		currentTime = glfwGetTime();
+
+
+		// Render the building
+		city.update(eye_center);
+		city.render(vp, viewMatrix, projectionMatrix, eye_center);
 
 
 		// Swap buffers
@@ -151,6 +157,7 @@ int main(void)
 	// Clean up
 
 	// Clean up
+	city.cleanup();
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();
