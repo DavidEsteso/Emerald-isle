@@ -1,5 +1,6 @@
 
 #include <building.h>
+#include <sky.h>
 
 
 #include <glad/gl.h>
@@ -109,6 +110,10 @@ int main(void)
 	building.scale = glm::vec3(width, height, depth);
 	building.initialize(building.position, building.scale, "../lab2/textures/cube");
 
+	Sky sky;
+	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(500.0f, 500.0f, 500.0f), skyTexturePaths);
+
+
 
 
 	// Camera setup
@@ -132,6 +137,7 @@ int main(void)
 
 		viewMatrixSky = glm::mat4(glm::mat3(viewMatrix)); // Remove translation
 		glm::mat4 vpSky = projectionMatrix * viewMatrixSky;
+		sky.render(vpSky);
 
 		building.render(vp, viewMatrix, projectionMatrix, eye_center);
 
