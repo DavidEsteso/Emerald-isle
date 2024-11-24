@@ -37,6 +37,7 @@ add_executable(lab2_building
 		lab2/city.h
 		lab2/ground.h
 		lab2/model1.h
+		lab2/model2.h
 )
 
 # Link the necessary libraries to the first executable

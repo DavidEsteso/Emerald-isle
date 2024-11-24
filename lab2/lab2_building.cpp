@@ -1,8 +1,9 @@
 
 #include <sky.h>
 #include <city.h>
+#include <model2.h>
 
-
+#include<model1.h>
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -13,9 +14,7 @@
 #include <ctime>
 
 #include <render/shader.h>
-#include "model1.h"
-#include <fstream>
-#include <sstream>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
@@ -30,12 +29,11 @@
 
 
 
-
 static GLFWwindow *window;
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
 
 // OpenGL camera view parameters
-static glm::vec3 eye_center(0.0f, 0.0f, 0.0f); // Position the camera inside the cube
+static glm::vec3 eye_center(300.0f, 300.0f, 300.0f); // Position the camera inside the cube
 static glm::vec3 lookat(0, 1, 1);
 static glm::vec3 up(0, 1, 0);
 
@@ -103,6 +101,9 @@ int main(void)
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);;
+
 
 	float width = 16.0f;
 	float depth = 16.0f;
@@ -112,14 +113,17 @@ int main(void)
     InfiniteCity city;
 	float currentTime = 0.0f;
 
+	//Tree tree;
+	//glm::vec3 tree_position = eye_center + front * 350.0f;
+	//tree.initialize("../lab2/models/Tree/Tree.obj", "../lab2/models/Tree", tree_position, glm::vec3(50.0f, 50.0f, 50.0f));
 
+	Aircraft aircraft;
+	glm::vec3 aircraft_pos = eye_center + front * 350.0f;
+	aircraft.initialize("../lab2/models/air/E45Aircraft_obj.obj", "../lab2/models/air", aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
 
 	Sky sky;
 	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(500.0f, 500.0f, 500.0f), skyTexturePaths);
 
-	ModelOBJ model;
-	model.initialize("../lab2/models/Futuristic_Car_2.1_obj.obj",
-					glm::vec3(0.0f), glm::vec3(10.0f));
 
 
 	// Camera setup
@@ -137,8 +141,7 @@ int main(void)
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		//print camera lookat
-		std::cout << "lookat: " << lookat.x << " " << lookat.y << " " << lookat.z << std::endl;
+
 		viewMatrix = glm::lookAt(eye_center, lookat, up);
 		glm::mat4 vp = projectionMatrix * viewMatrix;
 
@@ -148,11 +151,11 @@ int main(void)
 
 		currentTime = glfwGetTime();
 
-
+		aircraft.render(vp, eye_center);
+		//tree.render(vp, eye_center);
 		// Render the building
 		//city.update(eye_center);
 		//city.render(vp, viewMatrix, projectionMatrix, eye_center);
-		model.render(vp, eye_center);
 
 
 		// Swap buffers
