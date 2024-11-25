@@ -27,6 +27,7 @@
 #include <building.h>
 #include <ground.h>
 #include <model1.h>
+#include <model2.h>
 
 
 
@@ -75,10 +76,8 @@ struct InfiniteCity {
 		"..lab2/textures/facade5.jpg"
 	};
 
-    // Chunk storage
 	std::unordered_map<ChunkCoord, std::pair<std::vector<Building>, Ground>, ChunkCoordHash> chunks;
 
-    // Helper function to get chunk coordinates
     ChunkCoord getChunkCoord(float x, float z) {
         return {
             static_cast<int>(std::floor(x / CHUNK_SIZE)),
@@ -86,7 +85,7 @@ struct InfiniteCity {
         };
     }
 
-	// Modify generateChunk function
+
 	void generateChunk(const ChunkCoord& coord) {
     	if (chunks.find(coord) != chunks.end()) return;
 

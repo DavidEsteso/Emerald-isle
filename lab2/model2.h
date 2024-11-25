@@ -12,6 +12,28 @@
 #include <iostream>
 #include <unordered_map>
 
+#include <chrono>
+
+struct KeyFrame {
+    float time; 
+    glm::vec3 position;
+};
+
+float smoothEaseInOut(float x) {
+    float t = (1 - cos(x * M_PI)) / 2;
+    return t * t * (3 - 2 * t);
+}
+
+float easeInOutCubic(float t) {
+    return t < 0.5f ? 4.0f * t * t * t : 1.0f - pow(-2.0f * t + 2.0f, 3.0f) / 2.0f;
+}
+
+float smoothstep(float edge0, float edge1, float x) {
+    float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+    return t * t * (3.0f - 2.0f * t);
+}
+
+
 struct MaterialAir {
     GLuint diffuseMap;
     GLuint specularMap;
@@ -111,7 +133,7 @@ struct Aircraft {
     std::vector<float> normal_buffer_data;
     std::vector<float> uv_buffer_data;
     std::vector<unsigned int> index_buffer_data;
-    std::vector<int> material_indices;  // Material index for each face
+    std::vector<int> material_indices;
 
     GLuint vertexArrayID;
     GLuint vertexBufferID;
@@ -126,11 +148,39 @@ struct Aircraft {
 
     std::vector<MaterialAir> materials;
 
+    std::vector<KeyFrame> keyframes;
+    float animationDuration;
+    float currentTime;
+    float floatAmplitude;
+    float floatScale;
+    float floatSpeed;
+    glm::vec3 basePosition;
+
+    struct MovementRange {
+        float minHeight;
+        float maxHeight;
+        float primaryScale;
+        float secondaryScale;
+    } moveRange;
+
     void initialize(const char* modelPath, const char* materialBaseDir, glm::vec3 pos, glm::vec3 scl) {
-        std::cout << "Loading model from path: " << modelPath << std::endl;
-        std::cout << "Material base directory: " << materialBaseDir << std::endl;
+        basePosition = pos;
         position = pos;
         scale = scl;
+
+        floatAmplitude = 2.0f;
+        floatScale = 1.5f;
+        floatSpeed = 0.5f;
+        currentTime = 0.0f;
+        animationDuration = 4.0f;
+
+        moveRange.minHeight = -3.0f;
+        moveRange.maxHeight = 3.0f;
+        moveRange.primaryScale = 1.5f;
+        moveRange.secondaryScale = 0.3f;
+
+        setupFloatingAnimation();
+
 
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
@@ -235,6 +285,13 @@ struct Aircraft {
     }
 
     void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
+        static auto lastTime = std::chrono::high_resolution_clock::now();
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
+        lastTime = currentTime;
+
+        update(deltaTime);
+
         glUseProgram(programID);
 
         glEnableVertexAttribArray(0);
@@ -314,6 +371,99 @@ struct Aircraft {
         glDisableVertexAttribArray(1);
         glDisableVertexAttribArray(2);
     }
+
+        void setupFloatingAnimation() {
+        keyframes.clear();
+
+        const int numKeyframes = 12;
+        for (int i = 0; i < numKeyframes; i++) {
+            float t = (float)i / (numKeyframes - 1) * animationDuration;
+
+            float phase = (t / animationDuration) * 2.0f * M_PI;
+
+            float primaryMotion = sin(phase) * moveRange.primaryScale;
+            float secondaryMotion = sin(phase * 2.0f) * moveRange.secondaryScale;
+
+            float heightOffset = (primaryMotion + secondaryMotion) * floatAmplitude * floatScale;
+
+            heightOffset = std::clamp(heightOffset, moveRange.minHeight, moveRange.maxHeight);
+
+            float y = basePosition.y + heightOffset;
+
+            keyframes.push_back({t, glm::vec3(basePosition.x, y, basePosition.z)});
+        }
+    }
+
+    glm::vec3 interpolatePosition(float time) {
+        time = fmod(time, animationDuration);
+
+        KeyFrame* k1 = nullptr;
+        KeyFrame* k2 = nullptr;
+
+        for (size_t i = 0; i < keyframes.size() - 1; i++) {
+            if (time >= keyframes[i].time && time <= keyframes[i + 1].time) {
+                k1 = &keyframes[i];
+                k2 = &keyframes[i + 1];
+                break;
+            }
+        }
+
+        if (!k1 || !k2) {
+            return position;
+        }
+
+        float t = (time - k1->time) / (k2->time - k1->time);
+        t = easeInOutCubic(t);
+
+        // Enhanced smoothing for larger range
+        float extremeThreshold = 0.25f; // Aumentado para suavizar más en los extremos
+        if (t < extremeThreshold) {
+            t = smoothstep(0.0f, extremeThreshold, t) * extremeThreshold;
+        } else if (t > (1.0f - extremeThreshold)) {
+            t = (1.0f - extremeThreshold) + smoothstep(0.0f, extremeThreshold, t - (1.0f - extremeThreshold)) * extremeThreshold;
+        }
+
+        glm::vec3 interpolatedPos = k1->position * (1.0f - t) + k2->position * t;
+
+        // Add enhanced secondary motion
+        float secondaryMotion = sin(time * 2.5f) * 0.15f * floatAmplitude * moveRange.secondaryScale;
+        interpolatedPos.y += secondaryMotion;
+
+        return interpolatedPos;
+    }
+
+    void update(float deltaTime) {
+        currentTime += deltaTime * floatSpeed;
+
+        float cyclePosition = fmod(currentTime, animationDuration) / animationDuration;
+
+        float angle = cyclePosition * 2.0f * M_PI;
+
+        float baseOffset = sin(angle);
+
+        float transitionZone = 0.2f;
+
+        float distToTop = abs(angle - M_PI * 0.5f);
+        float distToBottom = abs(angle - M_PI * 1.5f);
+        float minDist = std::min(distToTop, distToBottom);
+
+        float verticalOffset;
+        if (minDist < transitionZone) {
+            float t = 1.0f - (minDist / transitionZone);
+            float smoothFactor = smoothEaseInOut(t);
+
+            if (distToTop < distToBottom) {
+                verticalOffset = floatAmplitude * (1.0f - (1.0f - smoothFactor) * (1.0f - sin(angle)));
+            } else {
+                verticalOffset = floatAmplitude * (-1.0f + (1.0f - smoothFactor) * (1.0f + sin(angle)));
+            }
+        } else {
+            verticalOffset = floatAmplitude * baseOffset;
+        }
+
+        position = basePosition + glm::vec3(0.0f, verticalOffset, 0.0f);
+    }
+
 
     void loadMaterials(const std::vector<tinyobj::material_t>& materials_obj, const char* materialBaseDir) {
         materials.resize(materials_obj.size());
