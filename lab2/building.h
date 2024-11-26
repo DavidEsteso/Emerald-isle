@@ -22,6 +22,7 @@
 #include <fastNoiseLite.h>
 #include <random>
 
+#include "entity.h"
 
 
 GLuint LoadCubeMap(const char* cubemapDir) {
@@ -60,7 +61,7 @@ GLuint LoadCubeMap(const char* cubemapDir) {
 	return textureID;
 }
 
-struct Building {
+struct Building : public Entity{
 	glm::vec3 position;		// Position of the box
 	glm::vec3 scale;		// Size of the box in each axis
 
@@ -369,7 +370,7 @@ struct Building {
         //glDisableVertexAttribArray(2);
 	}
 
-	void cleanup() {
+	void cleanup() override{
 		glDeleteBuffers(1, &vertexBufferID);
 		glDeleteBuffers(1, &colorBufferID);
 		glDeleteBuffers(1, &indexBufferID);

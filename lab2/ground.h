@@ -25,7 +25,7 @@
 
 
 
-struct Ground {
+struct Ground : public Entity {
 	glm::vec3 position;		// Position of the box
 	glm::vec3 scale;		// Size of the box in each axis
 
@@ -189,7 +189,7 @@ struct Ground {
         //glDisableVertexAttribArray(2);
 	}
 
-	void cleanup() {
+	void cleanup() override{
 		glDeleteBuffers(1, &vertexBufferID);
 		glDeleteBuffers(1, &colorBufferID);
 		glDeleteBuffers(1, &indexBufferID);

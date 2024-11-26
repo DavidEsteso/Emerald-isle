@@ -117,9 +117,9 @@ int main(void)
 	//glm::vec3 tree_position = eye_center + front * 350.0f;
 	//tree.initialize("../lab2/models/Tree/Tree.obj", "../lab2/models/Tree", tree_position, glm::vec3(50.0f, 50.0f, 50.0f));
 
-	Aircraft aircraft;
-	glm::vec3 aircraft_pos = eye_center + front * 350.0f;
-	aircraft.initialize("../lab2/models/air/E45Aircraft_obj.obj", "../lab2/models/air", aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
+	//Aircraft aircraft;
+	//glm::vec3 aircraft_pos = eye_center + front * 350.0f;
+	//aircraft.initialize("../lab2/models/air/E45Aircraft_obj.obj", "../lab2/models/air", aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
 
 	Sky sky;
 	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(500.0f, 500.0f, 500.0f), skyTexturePaths);
@@ -147,15 +147,15 @@ int main(void)
 
 		viewMatrixSky = glm::mat4(glm::mat3(viewMatrix)); // Remove translation
 		glm::mat4 vpSky = projectionMatrix * viewMatrixSky;
-		//sky.render(vpSky);
+		sky.render(vpSky);
 
 		currentTime = glfwGetTime();
 
-		aircraft.render(vp, eye_center);
+		//aircraft.render(vp, eye_center);
 		//tree.render(vp, eye_center);
 		// Render the building
-		//city.update(eye_center);
-		//city.render(vp, viewMatrix, projectionMatrix, eye_center);
+		city.update(eye_center);
+		city.render(vp, viewMatrix, projectionMatrix, eye_center);
 
 
 		// Swap buffers

@@ -26,6 +26,7 @@
 
 #include <building.h>
 #include <ground.h>
+#include <memory>
 #include <model1.h>
 #include <model2.h>
 
@@ -76,7 +77,7 @@ struct InfiniteCity {
 		"..lab2/textures/facade5.jpg"
 	};
 
-	std::unordered_map<ChunkCoord, std::pair<std::vector<Building>, Ground>, ChunkCoordHash> chunks;
+	std::unordered_map<ChunkCoord, std::vector<std::shared_ptr<Entity>>, ChunkCoordHash> chunks;
 
     ChunkCoord getChunkCoord(float x, float z) {
         return {
@@ -86,34 +87,35 @@ struct InfiniteCity {
     }
 
 
-	void generateChunk(const ChunkCoord& coord) {
-    	if (chunks.find(coord) != chunks.end()) return;
 
-    	std::vector<Building> buildings;
-    	Ground chunkGround;
+	    void generateChunk(const ChunkCoord& coord) {
+        if (chunks.find(coord) != chunks.end()) return;
+
     	const float BLOCK_SIZE = 32.0f;
 
     	// Calculate base coordinates for this chunk
     	float baseX = coord.x * CHUNK_SIZE;
     	float baseZ = coord.z * CHUNK_SIZE;
 
+        std::vector<std::shared_ptr<Entity>> chunkEntities;
 
-        // Generate buildings in a grid pattern
+        // Existing chunk generation logic
         for (int i = 0; i < BUILDINGS_PER_ROW; ++i) {
             for (int j = 0; j < BUILDINGS_PER_ROW; ++j) {
-                Building building;
+                auto building = std::make_shared<Building>();
 
-                // Generate consistent random values for this building
+                // Generate consistent random values
                 unsigned seed = std::hash<int>()(coord.x ^ (coord.z << 16) ^ (i << 8) ^ j);
                 std::srand(seed);
 
-                // Calculate building properties
                 const char* texturePath = texturePaths[std::rand() % 6];
                 float height = (std::rand() % 5 + 1) * 16.0f;
                 float width = (std::rand() % 2) ? 32.0f : 16.0f;
                 float depth = (std::rand() % 2) ? 32.0f : 16.0f;
 
-                // Calculate building position
+                float baseX = coord.x * CHUNK_SIZE;
+                float baseZ = coord.z * CHUNK_SIZE;
+
                 float x = baseX + i * (BLOCK_SIZE + STREET_WIDTH);
                 float z = baseZ + j * (BLOCK_SIZE + STREET_WIDTH);
 
@@ -123,33 +125,33 @@ struct InfiniteCity {
                     z + (BLOCK_SIZE - depth) * 0.5f
                 );
 
-                // Initialize building and add to chunk
-                building.initialize(position, glm::vec3(width, height, depth), "../lab2/textures/cube");
-                buildings.push_back(building);
+                building->initialize(position, glm::vec3(width, height, depth), "../lab2/textures/cube");
+                chunkEntities.push_back(building);
             }
         }
 
-    	// Initialize ground for this chunk
-    	unsigned seed = std::hash<int>()(coord.x ^ (coord.z << 16));
-    	std::mt19937 rng(seed);
-    	std::uniform_int_distribution<int> dist(0, 3);
-    	const char* groundTexture = groundTexturePaths[dist(rng)];
+        // Add ground
+        auto ground = std::make_shared<Ground>();
+        unsigned seed = std::hash<int>()(coord.x ^ (coord.z << 16));
+        std::mt19937 rng(seed);
+        std::uniform_int_distribution<int> dist(0, 3);
+        const char* groundTexture = groundTexturePaths[dist(rng)];
 
-    	glm::vec3 groundPosition(
-			baseX + CHUNK_SIZE * 0.5f,
-			0.0f,
-			baseZ + CHUNK_SIZE * 0.5f
-		);
-    	glm::vec3 groundScale(CHUNK_SIZE * 0.5f, 0.0f, CHUNK_SIZE * 0.5f);
+        glm::vec3 groundPosition(
+            baseX + CHUNK_SIZE * 0.5f,
+            0.0f,
+            baseZ + CHUNK_SIZE * 0.5f
+        );
+        glm::vec3 groundScale(CHUNK_SIZE * 0.5f, 0.0f, CHUNK_SIZE * 0.5f);
 
-    	chunkGround.initialize(groundPosition, groundScale, groundTexture);
+        ground->initialize(groundPosition, groundScale, groundTexture);
+        chunkEntities.push_back(ground);
 
-    	// Store both buildings and ground in the chunk
-    	chunks[coord] = std::make_pair(buildings, chunkGround);
+        // Store chunk entities
+        chunks[coord] = chunkEntities;
     }
 
 
-	// City update function
 	void update(const glm::vec3& cameraPos) {
     	// Get current chunk from camera position
     	ChunkCoord currentChunk = getChunkCoord(cameraPos.x, cameraPos.z);
@@ -173,36 +175,34 @@ struct InfiniteCity {
 
     	// Clean up and remove chunks that are out of range
     	for (const auto& coord : chunksToRemove) {
-    		// Clean up buildings
-    		for (auto& building : chunks[coord].first) {
-    			building.cleanup();
+    		// Clean up all entities in the chunk
+    		for (auto& entity : chunks[coord]) {
+    			entity->cleanup();
     		}
-    		// Clean up ground
-    		chunks[coord].second.cleanup();
+
     		// Remove chunk from map
     		chunks.erase(coord);
     	}
     }
 
-	// Modify render function, needs camera view and projection matrices
 	void render(glm::mat4 vp, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, glm::vec3 eye) {
     	for (auto& chunk : chunks) {
-    		// Render ground first
-    		chunk.second.second.render(vp);
-    		// Then render buildings
-    		for (auto& building : chunk.second.first) {
-    			building.render(vp, viewMatrix, projectionMatrix, eye);
+    		for (auto& entity : chunk.second) {
+    			// Polymorphic rendering
+    			if (auto building = dynamic_cast<Building*>(entity.get())) {
+    				building->render(vp, viewMatrix, projectionMatrix, eye);
+    			} else if (auto ground = dynamic_cast<Ground*>(entity.get())) {
+					ground->render(vp);
+				}
     		}
     	}
     }
 
-	// Modify cleanup function
 	void cleanup() {
     	for (auto& chunk : chunks) {
-    		for (auto& building : chunk.second.first) {
-    			building.cleanup();
+    		for (auto& entity : chunk.second) {
+    			entity->cleanup();
     		}
-    		chunk.second.second.cleanup();
     	}
     	chunks.clear();
     }
