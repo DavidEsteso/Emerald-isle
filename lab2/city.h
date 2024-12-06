@@ -27,8 +27,9 @@
 #include <building.h>
 #include <ground.h>
 #include <memory>
-#include <model1.h>
-#include <model2.h>
+#include <tree.h>
+#include <aircraft.h>
+
 
 
 
@@ -52,7 +53,7 @@ struct ChunkCoordHash {
 struct InfiniteCity {
     // Constants
     const int CHUNK_SIZE = 192;        // Size of chunk (6 buildings * (32*2 + 6))
-    const int RENDER_DISTANCE = 1;      // How many chunks to render in each direction
+    const int RENDER_DISTANCE = 0;      // How many chunks to render in each direction
     const float STREET_WIDTH = 6.0f;    // Width of streets between buildings
     const int BUILDINGS_PER_ROW = 1;    // Number of buildings per row in a chunk
 

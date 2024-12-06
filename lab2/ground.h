@@ -22,7 +22,7 @@
 #include <fastNoiseLite.h>
 #include <random>
 
-
+#include "entity.h"
 
 
 struct Ground : public Entity {
@@ -61,6 +61,13 @@ struct Ground : public Entity {
 
 	};
 
+	GLfloat normal_buffer_data[12] = {
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		};
+
     // ---------------------------
 
 	// OpenGL buffers
@@ -70,11 +77,18 @@ struct Ground : public Entity {
 	GLuint colorBufferID;
 	GLuint uvBufferID;
 	GLuint textureID;
+	GLuint normalBufferID;
+	GLuint modelMatrixID;
+
 
 	// Shader variable IDs
 	GLuint mvpMatrixID;
 	GLuint textureSamplerID;
 	GLuint programID;
+
+	GLuint lightPositionID;
+	GLuint lightIntensityID;
+	GLuint lightColorID;
 
 	void initialize(glm::vec3 position, glm::vec3 scale, const char* texturePath) {
 
@@ -91,12 +105,15 @@ struct Ground : public Entity {
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buffer_data), vertex_buffer_data, GL_STATIC_DRAW);
 
-		// Create a vertex buffer object to store the color data
-        // TODO:
+
 		glGenBuffers(1, &colorBufferID);
 		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
 
 		glBufferData(GL_ARRAY_BUFFER, sizeof(color_buffer_data), color_buffer_data, GL_STATIC_DRAW);
+
+		glGenBuffers(1, &normalBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(normal_buffer_data), normal_buffer_data, GL_STATIC_DRAW);
 
 		// --------------------
 
@@ -121,6 +138,12 @@ struct Ground : public Entity {
 
 		// Get a handle for our "MVP" uniform
 		mvpMatrixID = glGetUniformLocation(programID, "MVP");
+		lightPositionID = glGetUniformLocation(programID, "lightPosition");
+		lightIntensityID = glGetUniformLocation(programID, "lightIntensity");
+		lightColorID = glGetUniformLocation(programID, "lightColor");
+
+		modelMatrixID = glGetUniformLocation(programID, "model");
+
 
         // TODO: Load a texture--DONE
         // --------------------
@@ -132,7 +155,9 @@ struct Ground : public Entity {
 		textureSamplerID  = glGetUniformLocation(programID,"textureSampler");
         // -------------------------------------
 
+
 	}
+
 
 	void render(glm::mat4 cameraMatrix) {
 		glUseProgram(programID);
@@ -145,7 +170,13 @@ struct Ground : public Entity {
 		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
+		glEnableVertexAttribArray(2);
+		glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+
+
 
 		// TODO: Model transform
 		// -----------------------
@@ -162,9 +193,9 @@ struct Ground : public Entity {
 
 		// TODO: Enable UV buffer and texture sampler--DONE
 		// ------------------------------------------
-		glEnableVertexAttribArray(2);
+		glEnableVertexAttribArray(3);
 		glBindBuffer(GL_ARRAY_BUFFER, uvBufferID);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
 		// Set textureSampler to use texture unit 0
 		glActiveTexture(GL_TEXTURE0);
@@ -173,6 +204,12 @@ struct Ground : public Entity {
 
 		float time = glfwGetTime();
 		glUniform1f(glGetUniformLocation(programID, "time"), time);
+		glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
+
+
+		glUniform3fv(lightPositionID, 1, &LightPosition[0]);
+		glUniform3fv(lightIntensityID, 1, &lightIntensity[0]);
+		glUniform3fv(lightColorID, 1, &LightColor[0]);
 
         // ------------------------------------------
 

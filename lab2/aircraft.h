@@ -163,10 +163,12 @@ struct Aircraft {
         float secondaryScale;
     } moveRange;
 
-    void initialize(const char* modelPath, const char* materialBaseDir, glm::vec3 pos, glm::vec3 scl) {
+    void initialize(glm::vec3 pos, glm::vec3 scl) {
         basePosition = pos;
         position = pos;
         scale = scl;
+        const char* modelPath = "../lab2/models/air/E45Aircraft_obj.obj";
+        const char* materialBaseDir = "../lab2/models/air";
 
         floatAmplitude = 2.0f;
         floatScale = 1.5f;

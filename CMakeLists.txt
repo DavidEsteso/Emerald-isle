@@ -36,8 +36,8 @@ add_executable(lab2_building
 		lab2/building.h
 		lab2/city.h
 		lab2/ground.h
-		lab2/model1.h
-		lab2/model2.h
+        lab2/tree.h
+		lab2/aircraft.h
 		lab2/entity.h
 )
 

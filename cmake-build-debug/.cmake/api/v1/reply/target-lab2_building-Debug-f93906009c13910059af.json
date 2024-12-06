@@ -234,12 +234,12 @@
 		},
 		{
 			"backtrace" : 2,
-			"path" : "lab2/model1.h",
+			"path" : "lab2/tree.h",
 			"sourceGroupIndex" : 1
 		},
 		{
 			"backtrace" : 2,
-			"path" : "lab2/model2.h",
+			"path" : "lab2/aircraft.h",
 			"sourceGroupIndex" : 1
 		},
 		{

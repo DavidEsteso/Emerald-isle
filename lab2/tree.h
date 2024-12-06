@@ -44,7 +44,7 @@ GLuint LoadTexture(const std::string& path) {
     return textureID;
 }
 
-struct Tree {
+struct Tree : public Entity {
     glm::vec3 position;
     glm::vec3 scale;
 
@@ -65,11 +65,17 @@ struct Tree {
     GLuint modelMatrixID;
     GLuint viewPosID;
 
+    GLuint lightPositionID;
+    GLuint lightIntensityID;
+    GLuint lightColorID;
+
     std::vector<Material> materials;
 
-    void initialize(const char* modelPath, const char* materialBaseDir, glm::vec3 pos, glm::vec3 scl) {
+    void initialize(glm::vec3 pos, glm::vec3 scl) {
         position = pos;
         scale = scl;
+        const char* modelPath = "../lab2/models/Tree/Tree.obj";
+        const char* materialBaseDir = "../lab2/models/Tree";
 
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
@@ -169,6 +175,12 @@ struct Tree {
         mvpMatrixID = glGetUniformLocation(programID, "MVP");
         modelMatrixID = glGetUniformLocation(programID, "model");
         viewPosID = glGetUniformLocation(programID, "viewPos");
+
+        lightPositionID = glGetUniformLocation(programID, "lightPosition");
+        lightIntensityID = glGetUniformLocation(programID, "lightIntensity");
+        lightColorID = glGetUniformLocation(programID, "lightColor");
+
+
     }
 
 
@@ -196,6 +208,9 @@ struct Tree {
         glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
         glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
         glUniform3fv(viewPosID, 1, &cameraPos[0]);
+        glUniform3fv(lightPositionID, 1, &LightPosition[0]);
+        glUniform3fv(lightIntensityID, 1, &lightIntensity[0]);
+        glUniform3fv(lightColorID, 1, &LightColor[0]);
 
         int lastMaterialID = -1;
         size_t startIndex = 0;

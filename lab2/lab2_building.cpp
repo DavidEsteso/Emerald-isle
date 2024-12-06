@@ -1,9 +1,9 @@
 
 #include <sky.h>
 #include <city.h>
-#include <model2.h>
+#include <aircraft.h>
 
-#include<model1.h>
+#include<tree.h>
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -31,6 +31,7 @@
 
 static GLFWwindow *window;
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
+static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 // OpenGL camera view parameters
 static glm::vec3 eye_center(300.0f, 300.0f, 300.0f); // Position the camera inside the cube
@@ -88,6 +89,9 @@ int main(void)
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 	glfwSetKeyCallback(window, key_callback);
 
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
 	// Load OpenGL functions, gladLoadGL returns the loaded version, 0 on error.
 	int version = gladLoadGL(glfwGetProcAddress);
 	if (version == 0)
@@ -113,13 +117,19 @@ int main(void)
     InfiniteCity city;
 	float currentTime = 0.0f;
 
-	//Tree tree;
-	//glm::vec3 tree_position = eye_center + front * 350.0f;
-	//tree.initialize("../lab2/models/Tree/Tree.obj", "../lab2/models/Tree", tree_position, glm::vec3(50.0f, 50.0f, 50.0f));
+	Tree tree;
+	glm::vec3 tree_position = eye_center + front * 350.0f;
+	tree.initialize(tree_position, glm::vec3(50.0f, 50.0f, 50.0f));
+
+	Building b;
+	b.initialize(tree_position, glm::vec3(32.0f, 32.0f, 32.0f), "../lab2/textures/cube");
+
+	Ground ground;
+	ground.initialize(tree_position, glm::vec3(500.0f, 500.0f, 500.0f), "../lab2/textures/ground.png");
 
 	//Aircraft aircraft;
 	//glm::vec3 aircraft_pos = eye_center + front * 350.0f;
-	//aircraft.initialize("../lab2/models/air/E45Aircraft_obj.obj", "../lab2/models/air", aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
+	//aircraft.initialize(aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
 
 	Sky sky;
 	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(500.0f, 500.0f, 500.0f), skyTexturePaths);
@@ -147,12 +157,14 @@ int main(void)
 
 		viewMatrixSky = glm::mat4(glm::mat3(viewMatrix)); // Remove translation
 		glm::mat4 vpSky = projectionMatrix * viewMatrixSky;
-		sky.render(vpSky);
+		//sky.render(vpSky);
 
 		currentTime = glfwGetTime();
 
 		//aircraft.render(vp, eye_center);
 		//tree.render(vp, eye_center);
+		//b.render(vp, viewMatrix, projectionMatrix, eye_center);
+		//ground.render(vp);
 		// Render the building
 		city.update(eye_center);
 		city.render(vp, viewMatrix, projectionMatrix, eye_center);
@@ -175,106 +187,90 @@ int main(void)
 	return 0;
 }
 
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    // Get window size dynamically
+    int windowWidth, windowHeight;
+    glfwGetWindowSize(window, &windowWidth, &windowHeight);
+
+    // Calculate screen center dynamically
+    static float lastX = static_cast<float>(windowWidth) / 2.0f;
+    static float lastY = static_cast<float>(windowHeight) / 2.0f;
+    static bool firstMouse = true;
+
+    if (firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;  // Reversed since y-coordinates go from bottom to top
+    lastX = xpos;
+    lastY = ypos;
+
+    const float sensitivity = 0.1f;
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+
+    // Constrain pitch
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    // Calculate new front vector
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    lookat = eye_center + glm::normalize(front);
+}
+
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
-	const float cameraSpeed = 20.0f;
-	const float rotationSpeed = 10.0f;
-	const float minHeight = 100.0f;
-	const float maxHeight = 300.0f;
+    const float cameraSpeed = 20.0f;
+    const float minHeight = 100.0f;
+    const float maxHeight = 300.0f;
 
-	if (key == GLFW_KEY_R && action == GLFW_PRESS)
-	{
-		std::cout << "Reset." << std::endl;
-	}
+    // Camera movement with WASD
+    glm::vec3 front = glm::normalize(glm::vec3(lookat.x - eye_center.x, 0.0f, lookat.z - eye_center.z));
+    glm::vec3 right = glm::normalize(glm::cross(front, up));
 
-	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-	{
-		if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS))
-		{
-			eye_center.y += cameraSpeed;
+    if (key == GLFW_KEY_W && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
+        eye_center += cameraSpeed * front;
+        lookat += cameraSpeed * front;
+    }
+    if (key == GLFW_KEY_S && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
+        eye_center -= cameraSpeed * front;
+        lookat -= cameraSpeed * front;
+    }
+    if (key == GLFW_KEY_A && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
+        eye_center -= cameraSpeed * right;
+        lookat -= cameraSpeed * right;
+    }
+    if (key == GLFW_KEY_D && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
+        eye_center += cameraSpeed * right;
+        lookat += cameraSpeed * right;
+    }
 
-			eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
+    // Height control with Left Control + Up/Down
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+        if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
+            eye_center.y += cameraSpeed;
+            eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
+            lookat.y = eye_center.y;
+        }
+        if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
+            eye_center.y -= cameraSpeed;
+            eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
+            lookat.y = eye_center.y;
+        }
+    }
 
-			lookat.y = eye_center.y;
-		}
-
-		if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS))
-		{
-			eye_center.y -= cameraSpeed;
-
-			eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
-
-			lookat.y = eye_center.y;
-		}
-	}
-	else
-	{
-		if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS))
-		{
-			glm::vec3 direction = glm::normalize(glm::vec3(lookat.x, 0.0f, lookat.z) - glm::vec3(eye_center.x, 0.0f, eye_center.z));
-			eye_center += cameraSpeed * direction;
-
-			eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
-
-			lookat = eye_center + glm::vec3(direction.x, 0.0f, direction.z);
-		}
-
-		if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS))
-		{
-			glm::vec3 direction = glm::normalize(glm::vec3(lookat.x, 0.0f, lookat.z) - glm::vec3(eye_center.x, 0.0f, eye_center.z));
-			eye_center -= cameraSpeed * direction;
-
-			eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
-
-			lookat = eye_center + glm::vec3(direction.x, 0.0f, direction.z);
-		}
-	}
-
-
-	if (key == GLFW_KEY_LEFT && (action == GLFW_REPEAT || action == GLFW_PRESS))
-	{
-		glm::vec3 right = glm::normalize(glm::cross(lookat - eye_center, up));
-		eye_center -= cameraSpeed * right;
-		lookat -= cameraSpeed * right;
-	}
-
-	if (key == GLFW_KEY_RIGHT && (action == GLFW_REPEAT || action == GLFW_PRESS))
-	{
-		glm::vec3 right = glm::normalize(glm::cross(lookat - eye_center, up));
-		eye_center += cameraSpeed * right;
-		lookat += cameraSpeed * right;
-	}
-
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, GL_TRUE);
-
-	if (key == GLFW_KEY_W && (action == GLFW_REPEAT || action == GLFW_PRESS))
-	{
-		pitch += rotationSpeed;
-		if (pitch > 89.0f)
-			pitch = 89.0f;
-	}
-
-	if (key == GLFW_KEY_S && (action == GLFW_REPEAT || action == GLFW_PRESS))
-	{
-		pitch -= rotationSpeed;
-		if (pitch < -89.0f)
-			pitch = -89.0f;
-	}
-
-	if (key == GLFW_KEY_A && (action == GLFW_REPEAT || action == GLFW_PRESS))
-	{
-		yaw -= rotationSpeed;
-	}
-
-	if (key == GLFW_KEY_D && (action == GLFW_REPEAT || action == GLFW_PRESS))
-	{
-		yaw += rotationSpeed;
-	}
-
-	glm::vec3 front;
-	front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-	front.y = sin(glm::radians(pitch));
-	front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-	lookat = eye_center + glm::normalize(front);
+    // Escape to close window
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, GL_TRUE);
 }

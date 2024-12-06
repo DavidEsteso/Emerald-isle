@@ -202,14 +202,39 @@ struct Building : public Entity{
 	};
 
 	GLfloat normal_buffer_data[72] = {
-		0.0f, 0.0f, 1.0f,  // Front
-		0.0f, 0.0f, -1.0f, // Back
-		-1.0f, 0.0f, 0.0f, // Left
-		1.0f, 0.0f, 0.0f,  // Right
-		0.0f, 1.0f, 0.0f,  // Top
-		0.0f, -1.0f, 0.0f  // Bottom
-	};
+		0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f,
 
+		0.0f, 0.0f, 1.0f,
+
+		0.0f, 0.0f, 1.0f,
+
+		0.0f, 0.0f, -1.0f,
+		0.0f, 0.0f, -1.0f,
+		0.0f, 0.0f, -1.0f,
+		0.0f, 0.0f, -1.0f,
+
+		-1.0f, 0.0f, 0.0f,
+		-1.0f, 0.0f, 0.0f,
+		-1.0f, 0.0f, 0.0f,
+		-1.0f, 0.0f, 0.0f,
+
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+
+		0.0f, -1.0f, 0.0f,
+		0.0f, -1.0f, 0.0f,
+		0.0f, -1.0f, 0.0f,
+		0.0f, -1.0f, 0.0f
+
+	};
     // ---------------------------
 
 	// OpenGL buffers
@@ -225,12 +250,18 @@ struct Building : public Entity{
 	GLuint viewMatrixID;
 	GLuint projectionMatrixID;
 	GLuint normalBufferID;
+	GLuint cameraPosID;
 
 
 	// Shader variable IDs
 	GLuint mvpMatrixID;
 	GLuint textureSamplerID;
 	GLuint programID;
+
+	GLuint lightPositionID;
+	GLuint lightIntensityID;
+	GLuint lightColorID;
+	GLuint normalMatrixID;
 
 	void initialize(glm::vec3 position, glm::vec3 scale, const char* cubemapPath) {
 
@@ -321,7 +352,14 @@ struct Building : public Entity{
 		viewMatrixID = glGetUniformLocation(programID, "view");
 		projectionMatrixID = glGetUniformLocation(programID, "projection");
 		modelMatrixID = glGetUniformLocation(programID, "model");
-		GLuint cameraPosLocation = glGetUniformLocation(programID, "cameraPosition");
+
+		lightPositionID = glGetUniformLocation(programID, "lightPosition");
+		lightIntensityID = glGetUniformLocation(programID, "lightIntensity");
+		lightColorID = glGetUniformLocation(programID, "lightColor");
+
+		cameraPosID = glGetUniformLocation(programID, "cameraPosition");
+
+		normalMatrixID = glGetUniformLocation(programID, "normalMatrix");
 
 
 	}
@@ -346,13 +384,26 @@ struct Building : public Entity{
         // -----------------------
 
 		// Set model-view-projection matrix
-		glUniformMatrix4fv(glGetUniformLocation(programID, "model"), 1, GL_FALSE, &modelMatrix[0][0]);
-		glUniformMatrix4fv(glGetUniformLocation(programID, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
-		glUniformMatrix4fv(glGetUniformLocation(programID, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
-		glUniform3fv(glGetUniformLocation(programID, "cameraPosition"), 1, &eye_center[0]);		// Bind cubemap texture
+		glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
+		glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &viewMatrix[0][0]);
+		glUniformMatrix4fv(projectionMatrixID, 1, GL_FALSE, &projectionMatrix[0][0]);
+		glUniform3fv(cameraPosID, 1, &eye_center[0]);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureID);
-		glUniform1i(glGetUniformLocation(programID, "cubemap"), 0);
+		glUniform1i(cubemapTextureID, 0);
+
+		glUniform3fv(lightPositionID, 1, &LightPosition[0]);
+		glUniform3fv(lightIntensityID, 1, &lightIntensity[0]);
+		glUniform3fv(lightColorID, 1, &LightColor[0]);
+
+		glm::mat4 normalMatrix = glm::transpose(glm::inverse(modelMatrix));
+		glUniformMatrix4fv(normalMatrixID, 1, GL_FALSE, &normalMatrix[0][0]);
+
+		//print light things
+		std::cout << "lightPositionID: " << LightPosition[0] << " " << LightPosition[1] << " " << LightPosition[2] << std::endl;
+		std::cout << "lightIntensityID: " << lightIntensity[0] << " " << lightIntensity[1] << " " << lightIntensity[2] << std::endl;
+		std::cout << "lightColorID: " << LightColor[0] << " " << LightColor[1] << " " << LightColor[2] << std::endl;
+
 
         // ------------------------------------------
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
