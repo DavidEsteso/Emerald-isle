@@ -2,6 +2,9 @@
 #define BUILDING_H
 
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
+#include <stb/stb_image_write.h>
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -12,7 +15,7 @@
 
 #include <render/shader.h>
 
-#include <stb/stb_image.h>
+
 
 #include <vector>
 #include <iostream>
@@ -62,8 +65,7 @@ GLuint LoadCubeMap(const char* cubemapDir) {
 }
 
 struct Building : public Entity{
-	glm::vec3 position;		// Position of the box
-	glm::vec3 scale;		// Size of the box in each axis
+
 
 	GLfloat vertex_buffer_data[72] = {	// Vertex definition for a canonical box
 		// Front face
@@ -239,8 +241,7 @@ struct Building : public Entity{
 
 	// OpenGL buffers
 	GLuint vertexArrayID;
-	GLuint vertexBufferID;
-	GLuint indexBufferID;
+
 	GLuint colorBufferID;
 	GLuint uvBufferID;
 	GLuint textureID;
@@ -364,7 +365,32 @@ struct Building : public Entity{
 
 	}
 
-    void render(glm::mat4 cameraMatrix, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, glm::vec3 eye_center) {
+
+	void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) {
+		glUseProgram(shadowProgramID);
+
+		GLuint lightSpaceMatrixID = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
+
+		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+
+		glEnableVertexAttribArray(0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+
+		glDrawElements(
+			GL_TRIANGLES,
+			36,
+			GL_UNSIGNED_INT,
+			(void*)0
+		);
+
+		glDisableVertexAttribArray(0);
+	}
+    void render(glm::mat4 cameraMatrix, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, glm::vec3 eye_center, GLuint shadowMapTexture, glm::mat4 lightSpaceMatrix) {
 		glUseProgram(programID);
 
 		glEnableVertexAttribArray(0);
@@ -377,9 +403,15 @@ struct Building : public Entity{
 
 		// TODO: Model transform
 		// -----------------------
-		glm::mat4 modelMatrix = glm::mat4(1.0f);
+		glm::mat4 modelMatrix = glm::mat4();
+		// Scale the box along each axis to make it look like a building
 		modelMatrix = glm::translate(modelMatrix, position);
 		modelMatrix = glm::scale(modelMatrix, scale);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, shadowMapTexture);
+		GLuint shadowMapID = glGetUniformLocation(programID, "shadowMap");
+		glUniform1i(shadowMapID, 1);
 
         // -----------------------
 
@@ -399,10 +431,8 @@ struct Building : public Entity{
 		glm::mat4 normalMatrix = glm::transpose(glm::inverse(modelMatrix));
 		glUniformMatrix4fv(normalMatrixID, 1, GL_FALSE, &normalMatrix[0][0]);
 
-		//print light things
-		std::cout << "lightPositionID: " << LightPosition[0] << " " << LightPosition[1] << " " << LightPosition[2] << std::endl;
-		std::cout << "lightIntensityID: " << lightIntensity[0] << " " << lightIntensity[1] << " " << lightIntensity[2] << std::endl;
-		std::cout << "lightColorID: " << LightColor[0] << " " << LightColor[1] << " " << LightColor[2] << std::endl;
+		GLuint lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");
+		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
 
 
         // ------------------------------------------

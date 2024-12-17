@@ -1,31 +1,26 @@
 
-#include <sky.h>
-#include <city.h>
-#include <aircraft.h>
-
-#include<tree.h>
-
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <iostream>
 #include <vector>
 #include <cstdlib>
 #include <ctime>
-
 #include <render/shader.h>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
-
-#include <vector>
-#include <iostream>
-#define w
 #include <math.h>
 #include <unordered_map>
 #include <cmath>
 #include <fastNoiseLite.h>
 #include <random>
+#include <building.h>
+#include <ground.h>
+#include <memory>
+#include <tree.h>
+#include <aircraft.h>
+#include <entity.h>
+#include <sky.h>
+#include <city.h>
 
 
 
@@ -34,7 +29,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 // OpenGL camera view parameters
-static glm::vec3 eye_center(300.0f, 300.0f, 300.0f); // Position the camera inside the cube
+static glm::vec3 eye_center(300.0f, 600.0f, 300.0f); // Position the camera inside the cube
 static glm::vec3 lookat(0, 1, 1);
 static glm::vec3 up(0, 1, 0);
 
@@ -116,20 +111,21 @@ int main(void)
 
     InfiniteCity city;
 	float currentTime = 0.0f;
+	city.initializeShadowMapping();
 
 	Tree tree;
-	glm::vec3 tree_position = eye_center + front * 350.0f;
+	glm::vec3 tree_position = glm::vec3(eye_center.x + front.x * 600.0f, 0.0f, eye_center.z + front.z * 600.0f);
 	tree.initialize(tree_position, glm::vec3(50.0f, 50.0f, 50.0f));
 
 	Building b;
 	b.initialize(tree_position, glm::vec3(32.0f, 32.0f, 32.0f), "../lab2/textures/cube");
 
 	Ground ground;
-	ground.initialize(tree_position, glm::vec3(500.0f, 500.0f, 500.0f), "../lab2/textures/ground.png");
+	ground.initialize(tree_position, glm::vec3(500.0f, 500.0f, 500.0f), "../lab2/textures/facade1.jpg");
 
-	//Aircraft aircraft;
-	//glm::vec3 aircraft_pos = eye_center + front * 350.0f;
-	//aircraft.initialize(aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
+	Aircraft aircraft;
+	glm::vec3 aircraft_pos = eye_center + front * 350.0f;
+	aircraft.initialize(aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
 
 	Sky sky;
 	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(500.0f, 500.0f, 500.0f), skyTexturePaths);
@@ -162,6 +158,7 @@ int main(void)
 		currentTime = glfwGetTime();
 
 		//aircraft.render(vp, eye_center);
+		//aircraft.update(currentTime);
 		//tree.render(vp, eye_center);
 		//b.render(vp, viewMatrix, projectionMatrix, eye_center);
 		//ground.render(vp);

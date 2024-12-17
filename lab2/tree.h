@@ -219,31 +219,25 @@ struct Tree : public Entity {
             int currentMaterialID = material_indices[i];
 
             if (currentMaterialID != lastMaterialID) {
-                // Dibujar el bloque anterior (si existe)
                 if (lastMaterialID >= 0) {
                     size_t count = i - startIndex;
                     glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)(startIndex * sizeof(unsigned int)));
                 }
 
-                // Cambiar material
                 if (currentMaterialID >= 0 && currentMaterialID < materials.size()) {
                     const Material& material = materials[currentMaterialID];
 
-                    // Difusa
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, material.diffuseMap);
                     glUniform1i(glGetUniformLocation(programID, "diffuseSampler"), 0);
 
-                    // Especular
                     glActiveTexture(GL_TEXTURE1);
                     glBindTexture(GL_TEXTURE_2D, material.specularMap);
                     glUniform1i(glGetUniformLocation(programID, "specularSampler"), 1);
 
-                    // Brillo
                     glUniform1f(glGetUniformLocation(programID, "shininess"), material.shininess);
                 }
 
-                // Actualizar índice del material
                 lastMaterialID = currentMaterialID;
                 startIndex = i;
             }
@@ -260,7 +254,7 @@ struct Tree : public Entity {
         glDisableVertexAttribArray(2);
     }
 
-    void cleanup() {
+    void cleanup() override{
         glDeleteBuffers(1, &vertexBufferID);
         glDeleteBuffers(1, &normalBufferID);
         glDeleteBuffers(1, &uvBufferID);
@@ -274,6 +268,10 @@ struct Tree : public Entity {
                 glDeleteTextures(1, &material.specularMap);
             }
         }
+    }
+
+    void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) override {
+        // Implementation of renderForShadows function
     }
 };
 

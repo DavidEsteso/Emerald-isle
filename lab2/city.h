@@ -1,6 +1,7 @@
 #ifndef CITY_H
 #define CITY_H
 
+
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -11,7 +12,6 @@
 
 #include <render/shader.h>
 
-#include <stb/stb_image.h>
 
 #include <vector>
 #include <iostream>
@@ -29,9 +29,28 @@
 #include <memory>
 #include <tree.h>
 #include <aircraft.h>
+#include <entity.h>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb/stb_image_write.h>
 
+static void saveDepthTexture(GLuint fbo, std::string filename) {
+	int width = 1024;
+	int height = 1024;
 
+	int channels = 3;
+
+	std::vector<float> depth(width * height);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glReadBuffer(GL_DEPTH_COMPONENT);
+	glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, depth.data());
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	std::vector<unsigned char> img(width * height * 3);
+	for (int i = 0; i < width * height; ++i) img[3*i] = img[3*i+1] = img[3*i+2] = depth[i] * 255;
+
+	stbi_write_png(filename.c_str(), width, height, channels, img.data(), width * channels);
+}
 
 // Chunk coordinate structure definition
 struct ChunkCoord {
@@ -53,30 +72,45 @@ struct ChunkCoordHash {
 struct InfiniteCity {
     // Constants
     const int CHUNK_SIZE = 192;        // Size of chunk (6 buildings * (32*2 + 6))
-    const int RENDER_DISTANCE = 0;      // How many chunks to render in each direction
+    const int RENDER_DISTANCE = 1;      // How many chunks to render in each direction
     const float STREET_WIDTH = 6.0f;    // Width of streets between buildings
     const int BUILDINGS_PER_ROW = 1;    // Number of buildings per row in a chunk
+	const float AIRCRAFT_SPAWN_PROBABILITY = 0.1f; // 50% chance of spawning an aircraft
+
+
+	GLuint shadowMapFBO;
+	GLuint shadowMapTexture;
+	GLuint shadowProgramID;
+	glm::mat4 lightSpaceMatrix;
+
+	glm::vec3 lightPosition = glm::vec3(300.0f, 200.0f, 300.0f);
+	glm::vec3 lightLookAt = glm::vec3(0.0f, -1.0f, 0.0f);
+
+	bool saveDepth = true;
+
+
 
     // Texture paths array
-    const char* texturePaths[6] = {
-        "../lab2/textures/facade0.jpg",
-    	"..lab2/textures/facade1.jpg",
-    	"..lab2/textures/facade2.jpg",
-    	"..lab2/textures/facade3.jpg",
-    	"..lab2/textures/facade4.jpg",
-    	"..lab2/textures/facade5.jpg"
-
-
-    };
+	// Texture paths array
+	const char* texturePaths[6] = {
+		"../lab2/textures/cube_right.png",
+		"../lab2/textures/cube_right.png",
+		"../lab2/textures/cube_right.png",
+		"../lab2/textures/cube_right.png",
+		"../lab2/textures/cube_right.png",
+		"../lab2/textures/cube_right.png",
+	};
 
 	const char* groundTexturePaths[6] = {
-		"../lab2/textures/facade0.jpg",
-		"..lab2/textures/facade1.jpg",
-		"..lab2/textures/facade2.jpg",
-		"..lab2/textures/facade3.jpg",
-		"..lab2/textures/facade4.jpg",
-		"..lab2/textures/facade5.jpg"
+		"../lab2/textures/cube_right.png",
+		"../lab2/textures/cube_right.png",
+		"../lab2/textures/cube_right.png",
+		"../lab2/textures/cube_right.png",
+		"../lab2/textures/cube_right.png",
+		"../lab2/textures/cube_right.png",
 	};
+
+	// Map of chunks to entities
 
 	std::unordered_map<ChunkCoord, std::vector<std::shared_ptr<Entity>>, ChunkCoordHash> chunks;
 
@@ -87,38 +121,59 @@ struct InfiniteCity {
         };
     }
 
-
-
-	    void generateChunk(const ChunkCoord& coord) {
+    void generateChunk(const ChunkCoord& coord) {
         if (chunks.find(coord) != chunks.end()) return;
 
-    	const float BLOCK_SIZE = 32.0f;
+        const float BLOCK_SIZE = 32.0f;
 
-    	// Calculate base coordinates for this chunk
-    	float baseX = coord.x * CHUNK_SIZE;
-    	float baseZ = coord.z * CHUNK_SIZE;
+        // Calculate base coordinates for this chunk
+        float baseX = coord.x * CHUNK_SIZE;
+        float baseZ = coord.z * CHUNK_SIZE;
 
         std::vector<std::shared_ptr<Entity>> chunkEntities;
 
-        // Existing chunk generation logic
+        // Ground generation with larger size
+        auto ground = std::make_shared<Ground>();
+        unsigned seed = std::hash<int>()(coord.x ^ (coord.z << 16));
+        std::mt19937 rng(seed);
+        std::uniform_int_distribution<int> dist(0, 3);
+        const char* groundTexture = groundTexturePaths[dist(rng)];
+
+        glm::vec3 groundPosition(
+            baseX + CHUNK_SIZE * 0.5f,
+            0.0f,
+            baseZ + CHUNK_SIZE * 0.5f
+        );
+
+        // Increase ground size
+        glm::vec3 groundScale(CHUNK_SIZE, 0.0f, CHUNK_SIZE);
+        ground->initialize(groundPosition, groundScale, groundTexture);
+        chunkEntities.push_back(ground);
+
+        // Calculate the center of the ground for building placement
+        float centerX = baseX + CHUNK_SIZE * 0.5f;
+        float centerZ = baseZ + CHUNK_SIZE * 0.5f;
+
+        // Building generation
+        float buildingAreaWidth = CHUNK_SIZE * 0.6f; // Use 60% of chunk width for buildings
+        float startX = centerX - buildingAreaWidth * 0.5f;
+        float startZ = centerZ - buildingAreaWidth * 0.5f;
+
         for (int i = 0; i < BUILDINGS_PER_ROW; ++i) {
             for (int j = 0; j < BUILDINGS_PER_ROW; ++j) {
                 auto building = std::make_shared<Building>();
 
-                // Generate consistent random values
-                unsigned seed = std::hash<int>()(coord.x ^ (coord.z << 16) ^ (i << 8) ^ j);
-                std::srand(seed);
+                // Use a consistent random seed
+                unsigned buildingSeed = std::hash<int>()(coord.x ^ (coord.z << 16) ^ (i << 8) ^ j);
+                std::srand(buildingSeed);
 
                 const char* texturePath = texturePaths[std::rand() % 6];
                 float height = (std::rand() % 5 + 1) * 16.0f;
                 float width = (std::rand() % 2) ? 32.0f : 16.0f;
                 float depth = (std::rand() % 2) ? 32.0f : 16.0f;
 
-                float baseX = coord.x * CHUNK_SIZE;
-                float baseZ = coord.z * CHUNK_SIZE;
-
-                float x = baseX + i * (BLOCK_SIZE + STREET_WIDTH);
-                float z = baseZ + j * (BLOCK_SIZE + STREET_WIDTH);
+                float x = startX + i * (width + STREET_WIDTH);
+                float z = startZ + j * (depth + STREET_WIDTH);
 
                 glm::vec3 position(
                     x + (BLOCK_SIZE - width) * 0.5f,
@@ -131,22 +186,22 @@ struct InfiniteCity {
             }
         }
 
-        // Add ground
-        auto ground = std::make_shared<Ground>();
-        unsigned seed = std::hash<int>()(coord.x ^ (coord.z << 16));
-        std::mt19937 rng(seed);
-        std::uniform_int_distribution<int> dist(0, 3);
-        const char* groundTexture = groundTexturePaths[dist(rng)];
+        // Aircraft generation (20% chance)
+        std::uniform_real_distribution<float> probDist(0.0f, 1.0f);
+        if (probDist(rng) < AIRCRAFT_SPAWN_PROBABILITY) {
+            auto aircraft = std::make_shared<Aircraft>();
 
-        glm::vec3 groundPosition(
-            baseX + CHUNK_SIZE * 0.5f,
-            0.0f,
-            baseZ + CHUNK_SIZE * 0.5f
-        );
-        glm::vec3 groundScale(CHUNK_SIZE * 0.5f, 0.0f, CHUNK_SIZE * 0.5f);
+            // Position aircraft high above the ground
+            float aircraftHeight = 150.0f + (std::rand() % 100); // Between 150 and 250
+            glm::vec3 aircraftPosition(
+                centerX + (std::rand() % 50 - 25), // Random offset from center
+                aircraftHeight,
+                centerZ + (std::rand() % 50 - 25)  // Random offset from center
+            );
 
-        ground->initialize(groundPosition, groundScale, groundTexture);
-        chunkEntities.push_back(ground);
+            aircraft->initialize(aircraftPosition, glm::vec3(20.0f, 20.0f, 20.0f));
+            chunkEntities.push_back(aircraft);
+        }
 
         // Store chunk entities
         chunks[coord] = chunkEntities;
@@ -162,6 +217,22 @@ struct InfiniteCity {
     		for (int dz = -RENDER_DISTANCE; dz <= RENDER_DISTANCE; dz++) {
     			ChunkCoord newChunk = {currentChunk.x + dx, currentChunk.z + dz};
     			generateChunk(newChunk);
+    		}
+    	}
+
+    	// Update all entities in chunks
+    	for (auto& chunk : chunks) {
+    		for (auto& entity : chunk.second) {
+    			// Dynamic cast to handle different entity types
+    			if (auto aircraft = dynamic_cast<Aircraft*>(entity.get())) {
+    				// Add delta time calculation or pass it as a parameter
+    				static auto lastTime = std::chrono::high_resolution_clock::now();
+    				auto currentTime = std::chrono::high_resolution_clock::now();
+    				float deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
+    				lastTime = currentTime;
+
+    				aircraft->update(deltaTime);
+    			}
     		}
     	}
 
@@ -186,16 +257,89 @@ struct InfiniteCity {
     	}
     }
 
+		    void initializeShadowMapping() {
+        glGenFramebuffers(1, &shadowMapFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+
+        glGenTextures(1, &shadowMapTexture);
+        glBindTexture(GL_TEXTURE_2D, shadowMapTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+                     1024, 1024, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+        shadowProgramID = LoadShadersFromFile("..lab2/shaders/shadow.vert", "..lab2/shaders/shadow.frag");
+
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMapTexture, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+
+    	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    	if (status != GL_FRAMEBUFFER_COMPLETE) {
+    		std::cerr << "Error framebuffer: " << status << std::endl;
+    	}
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void renderShadowMap(glm::vec3 lightPos, glm::vec3 lightLookAt) {
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+        glViewport(0, 0, 1024, 1024);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        glUseProgram(shadowProgramID);
+
+        glm::mat4 lightProjection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 100.0f);
+        glm::mat4 lightView = glm::lookAt(lightPos, lightLookAt, glm::vec3(0.0f, 1.0f, 0.0f));
+        lightSpaceMatrix = lightProjection * lightView;
+
+        GLuint lightSpaceMatrixID = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
+        glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+
+	    for (auto& chunk : chunks) {
+	        for (auto& entity : chunk.second) {
+				entity->renderForShadows(lightSpaceMatrix, shadowProgramID);
+	        	// print the position of each entity
+
+
+	        }
+	    }
+
+
+
+
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
 	void render(glm::mat4 vp, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, glm::vec3 eye) {
+    	// Render shadow map first
+    	//renderShadowMap(lightPosition, lightLookAt);
+
+    	// Render all entities in chunks
     	for (auto& chunk : chunks) {
     		for (auto& entity : chunk.second) {
-    			// Polymorphic rendering
     			if (auto building = dynamic_cast<Building*>(entity.get())) {
-    				building->render(vp, viewMatrix, projectionMatrix, eye);
+    				// Render buildings with shadow map
+    				building->render(vp, viewMatrix, projectionMatrix, eye, shadowMapTexture, lightSpaceMatrix);
     			} else if (auto ground = dynamic_cast<Ground*>(entity.get())) {
-					ground->render(vp);
-				}
+    				// Render ground with shadow map
+    				ground->render(vp, shadowMapTexture, lightSpaceMatrix);
+    			} else if (auto aircraft = dynamic_cast<Aircraft*>(entity.get())) {
+    				// Render aircraft
+    				aircraft->render(vp, eye);
+    			}
     		}
+    	}
+
+    	// Save depth texture if enabled
+    	if (saveDepth) {
+    		std::string filename = "depth_camera.png";
+    		saveDepthTexture(shadowMapFBO, filename);
+    		std::cout << "Depth texture saved to " << filename << std::endl;
+    		saveDepth = false;
     	}
     }
 

@@ -125,7 +125,7 @@ GLuint LoadTextureAir(const std::string& path) {
 }
 
 
-struct Aircraft {
+struct Aircraft : public Entity {
     glm::vec3 position;
     glm::vec3 scale;
 
@@ -418,7 +418,7 @@ struct Aircraft {
         t = easeInOutCubic(t);
 
         // Enhanced smoothing for larger range
-        float extremeThreshold = 0.25f; // Aumentado para suavizar más en los extremos
+        float extremeThreshold = 0.25f;
         if (t < extremeThreshold) {
             t = smoothstep(0.0f, extremeThreshold, t) * extremeThreshold;
         } else if (t > (1.0f - extremeThreshold)) {
@@ -508,6 +508,21 @@ struct Aircraft {
             materials[i].reflectionMap = defaultReflectionMap;
         }
     }
+    void cleanup() override {
+        //cleanpup
+        glDeleteBuffers(1, &vertexBufferID);
+        glDeleteBuffers(1, &normalBufferID);
+        glDeleteBuffers(1, &uvBufferID);
+        glDeleteBuffers(1, &indexBufferID);
+        glDeleteVertexArrays(1, &vertexArrayID);
+        glDeleteProgram(programID);
+
+    }
+
+    void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) override {
+        // Implementation of renderForShadows function
+    }
+
 };
 
 #endif

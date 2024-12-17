@@ -12,7 +12,6 @@
 
 #include <render/shader.h>
 
-#include <stb/stb_image.h>
 
 #include <vector>
 #include <iostream>
@@ -24,10 +23,32 @@
 
 #include "entity.h"
 
+static GLuint LoadTextureTileBox(const char *texture_file_path) {
+	int w, h, channels;
+	uint8_t* img = stbi_load(texture_file_path, &w, &h, &channels, 3);
+	GLuint texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	// To tile textures on a box, we set wrapping to repeat
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	if (img) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	} else {
+		std::cout << "Failed to load texture " << texture_file_path << std::endl;
+	}
+	stbi_image_free(img);
+
+	return texture;
+}
 
 struct Ground : public Entity {
-	glm::vec3 position;		// Position of the box
-	glm::vec3 scale;		// Size of the box in each axis
+
 
 	GLfloat vertex_buffer_data[12] = {	// Vertex definition for a canonical box
 		-1.0f, 1.0f, 1.0f,
@@ -72,8 +93,7 @@ struct Ground : public Entity {
 
 	// OpenGL buffers
 	GLuint vertexArrayID;
-	GLuint vertexBufferID;
-	GLuint indexBufferID;
+
 	GLuint colorBufferID;
 	GLuint uvBufferID;
 	GLuint textureID;
@@ -158,8 +178,42 @@ struct Ground : public Entity {
 
 	}
 
+	void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) {
+		glUseProgram(shadowProgramID);
 
-	void render(glm::mat4 cameraMatrix) {
+		GLuint modelLoc = glGetUniformLocation(shadowProgramID, "model");
+
+		modelMatrix = glm::mat4(1.0f);
+		modelMatrix = glm::translate(modelMatrix, position);
+		modelMatrix = glm::scale(modelMatrix, scale);
+
+
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &modelMatrix[0][0]);
+
+		GLuint lightSpaceMatrixID = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
+
+		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+
+		glEnableVertexAttribArray(0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+
+		glDrawElements(
+			GL_TRIANGLES,
+			6,
+			GL_UNSIGNED_INT,
+			(void*)0
+		);
+
+		glDisableVertexAttribArray(0);
+	}
+
+
+	void render(glm::mat4 cameraMatrix, GLuint shadowMapTexture, glm::mat4 lightSpaceMatrix) {
 		glUseProgram(programID);
 
 		glEnableVertexAttribArray(0);
@@ -176,7 +230,10 @@ struct Ground : public Entity {
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
 
-
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, shadowMapTexture);
+		GLuint shadowMapID = glGetUniformLocation(programID, "shadowMap");
+		glUniform1i(shadowMapID, 1);
 
 		// TODO: Model transform
 		// -----------------------
@@ -210,6 +267,12 @@ struct Ground : public Entity {
 		glUniform3fv(lightPositionID, 1, &LightPosition[0]);
 		glUniform3fv(lightIntensityID, 1, &lightIntensity[0]);
 		glUniform3fv(lightColorID, 1, &LightColor[0]);
+
+		//pass lightSpaceMatrix to shader
+		GLuint lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");
+		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+
+
 
         // ------------------------------------------
 
