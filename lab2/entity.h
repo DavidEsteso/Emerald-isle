@@ -5,8 +5,7 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
-#ifndef RENDERABLE_H
-#define RENDERABLE_H
+
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -32,8 +31,28 @@ public:
     virtual ~Entity() = default;
 
     virtual void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) = 0;
+
+    virtual void setPosition(const glm::vec3& newPosition) {
+        position = newPosition;
+        updateModelMatrix();
+    }
+
+    // Método para establecer escala
+    virtual void setScale(const glm::vec3& newScale) {
+        scale = newScale;
+        updateModelMatrix();
+    }
+
+
+    virtual void updateModelMatrix() {
+        modelMatrix = glm::mat4(1.0f);
+        modelMatrix = glm::translate(modelMatrix, position);
+        modelMatrix = glm::scale(modelMatrix, scale);
+    }
+
+    const glm::vec3& getPosition() const { return position; }
+    const glm::mat4& getModelMatrix() const { return modelMatrix; }
 };
 
 #endif
 
-#endif //ENTITY_H

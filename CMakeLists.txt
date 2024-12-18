@@ -11,6 +11,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 
 
+
+
 # Add the external directory
 add_subdirectory(external)
 
@@ -39,6 +41,7 @@ add_executable(lab2_building
         lab2/tree.h
 		lab2/aircraft.h
 		lab2/entity.h
+		lab2/TextRenderer.h
 )
 
 # Link the necessary libraries to the first executable

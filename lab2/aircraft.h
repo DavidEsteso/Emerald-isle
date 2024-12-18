@@ -59,7 +59,6 @@ GLuint LoadTextureAir(const std::string& path) {
     std::string normalizedPath = path;
     std::replace(normalizedPath.begin(), normalizedPath.end(), '\\', '/');
 
-    std::cout << "Attempting to load texture: " << normalizedPath << std::endl;
 
     FILE* file = fopen(normalizedPath.c_str(), "rb");
 
@@ -117,7 +116,6 @@ GLuint LoadTextureAir(const std::string& path) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, defaultColor);
     }
 
-    std::cout << "Texture loaded successfully:" << std::endl;
 
     return textureID;
 
@@ -163,6 +161,19 @@ struct Aircraft : public Entity {
         float secondaryScale;
     } moveRange;
 
+    bool isInteractable = false;
+    std::string interactionMessage = "Press ENTER to interact with aircraft";
+
+    void setInteractable(bool interactable) {
+        isInteractable = interactable;
+        std::cout << "Aircraft interaction found!" << std::endl;
+
+    }
+
+    void onInteract() {
+        cleanup();
+    }
+
     void initialize(glm::vec3 pos, glm::vec3 scl) {
         basePosition = pos;
         position = pos;
@@ -176,12 +187,11 @@ struct Aircraft : public Entity {
         currentTime = 0.0f;
         animationDuration = 4.0f;
 
-        moveRange.minHeight = -3.0f;
-        moveRange.maxHeight = 3.0f;
+        moveRange.minHeight = -5.0f;
+        moveRange.maxHeight = 5.0f;
         moveRange.primaryScale = 1.5f;
         moveRange.secondaryScale = 0.3f;
 
-        setupFloatingAnimation();
 
 
         tinyobj::attrib_t attrib;
@@ -194,25 +204,11 @@ struct Aircraft : public Entity {
             return;
         }
 
-        std::cout << "Model path used: " << modelPath << std::endl;
-        std::cout << "Material base dir used: " << materialBaseDir << std::endl;
-        std::cout << "Warning messages: " << warn << std::endl;
-        std::cout << "Error messages: " << err << std::endl;
-        std::cout << "Number of shapes loaded: " << shapes.size() << std::endl;
-        std::cout << "Number of materials loaded: " << materials_obj.size() << std::endl;
 
         // Load materials first
         loadMaterials(materials_obj, materialBaseDir);
 
-        std::cout << "Number of materials loaded: " << materials_obj.size() << std::endl;
-        for (size_t i = 0; i < materials_obj.size(); i++) {
-            const auto& mat = materials_obj[i];
-            std::cout << "Material " << i << ":" << std::endl;
-            std::cout << "  Diffuse texture: " << mat.diffuse_texname << std::endl;
-            std::cout << "  Diffuse color: " << mat.diffuse[0] << " " << mat.diffuse[1] << " " << mat.diffuse[2] << std::endl;
-            std::cout << "  Specular texture: " << mat.specular_texname << std::endl;
-            std::cout << "  Normal texture: " << mat.bump_texname << std::endl;
-        }
+
 
 
 
@@ -286,95 +282,152 @@ struct Aircraft : public Entity {
         viewPosID = glGetUniformLocation(programID, "viewPos");
     }
 
-    void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
-        static auto lastTime = std::chrono::high_resolution_clock::now();
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
-        lastTime = currentTime;
 
-        update(deltaTime);
+void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
+    // Static time tracking to ensure consistent animation across frames
+    static auto startTime = std::chrono::high_resolution_clock::now();
+    auto currentRenderTime = std::chrono::high_resolution_clock::now();
 
-        glUseProgram(programID);
+    // Calculate total elapsed time
+    float totalElapsedTime = std::chrono::duration<float>(currentRenderTime - startTime).count();
 
-        glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    // Ajustes para más rango y velocidad
+    float floatSpeed = 2.0f;       // Incrementa para mayor velocidad (original era menor)
+    float floatAmplitude = 1.5f;   // Incrementa para mayor amplitud del movimiento
+    float animationDuration = 2.0f; // Ajusta si quieres que el ciclo dure más o menos tiempo
 
-        glEnableVertexAttribArray(1);
-        glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    static float lastVerticalOffset = 0.0f; // Mantener el último desplazamiento calculado
 
-        glEnableVertexAttribArray(2);
-        glBindBuffer(GL_ARRAY_BUFFER, uvBufferID);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    float verticalOffset;
+    if (!isInteractable) {
+        // Actualizar movimiento si no es interactuable
+        float cyclePosition = fmod(totalElapsedTime * floatSpeed, animationDuration) / animationDuration;
+        float angle = cyclePosition * 2.0f * M_PI;
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+        float baseOffset = sin(angle);
 
-        glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), position);
-        modelMatrix = glm::scale(modelMatrix, scale);
-        glm::mat4 mvp = viewProjectionMatrix * modelMatrix;
+        float transitionZone = 0.2f;
 
-        glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
-        glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
-        glUniform3fv(viewPosID, 1, &cameraPos[0]);
+        float distToTop = abs(angle - M_PI * 0.5f);
+        float distToBottom = abs(angle - M_PI * 1.5f);
+        float minDist = std::min(distToTop, distToBottom);
 
-        int lastMaterialID = -1;
-        size_t startIndex = 0;
+        if (minDist < transitionZone) {
+            float t = 1.0f - (minDist / transitionZone);
+            float smoothFactor = smoothEaseInOut(t);
 
-        for (size_t i = 0; i < material_indices.size(); i++) {
-            int currentMaterialID = material_indices[i];
-
-            if (currentMaterialID != lastMaterialID) {
-                // Draw the previous block (if any)
-                if (lastMaterialID >= 0) {
-                    size_t count = i - startIndex;
-                    glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)(startIndex * sizeof(unsigned int)));
-                }
-
-                // Change material
-                if (currentMaterialID >= 0 && currentMaterialID < materials.size())
-                {
-                    const MaterialAir& material = materials[currentMaterialID];
-
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, material.diffuseMap);
-                    glUniform1i(glGetUniformLocation(programID, "diffuseTexture"), 0);
-
-                    glActiveTexture(GL_TEXTURE1);
-                    glBindTexture(GL_TEXTURE_2D, material.specularMap);
-                    glUniform1i(glGetUniformLocation(programID, "specularTexture"), 1);
-
-                    glActiveTexture(GL_TEXTURE2);
-                    glBindTexture(GL_TEXTURE_2D, material.normalMap);
-                    glUniform1i(glGetUniformLocation(programID, "normalMap"), 2);
-
-                    glActiveTexture(GL_TEXTURE3);
-                    glBindTexture(GL_TEXTURE_2D, material.reflectionMap);
-                    glUniform1i(glGetUniformLocation(programID, "reflectionMap"), 3);
-
-                    // Set material properties
-                    glUniform1f(glGetUniformLocation(programID, "shininess"), material.shininess);
-                    glUniform1f(glGetUniformLocation(programID, "opacity"), material.opacity);
-                    glUniform3fv(glGetUniformLocation(programID, "diffuseColor"), 1, &material.diffuseColor[0]);
-                    glUniform3fv(glGetUniformLocation(programID, "specularColor"), 1, &material.specularColor[0]);
-                    glUniform3fv(glGetUniformLocation(programID, "ambientColor"), 1, &material.ambientColor[0]);
-
-                    startIndex = i;
-                }
+            if (distToTop < distToBottom) {
+                verticalOffset = floatAmplitude * (1.0f - (1.0f - smoothFactor) * (1.0f - sin(angle)));
+            } else {
+                verticalOffset = floatAmplitude * (-1.0f + (1.0f - smoothFactor) * (1.0f + sin(angle)));
             }
-
-            lastMaterialID = currentMaterialID;
+        } else {
+            verticalOffset = floatAmplitude * baseOffset;
         }
 
-        size_t count = material_indices.size() - startIndex;
-        glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)(startIndex * sizeof(unsigned int)));
-
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-        glDisableVertexAttribArray(2);
+        // Guardar el último desplazamiento
+        lastVerticalOffset = verticalOffset;
+    } else {
+        // Mantener el último desplazamiento cuando es interactuable
+        verticalOffset = lastVerticalOffset;
     }
 
-        void setupFloatingAnimation() {
+    // Update position in-place
+    position = basePosition + glm::vec3(0.0f, verticalOffset, 0.0f);
+
+    // Rest of the existing render method remains the same
+    glUseProgram(programID);
+
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glEnableVertexAttribArray(2);
+    glBindBuffer(GL_ARRAY_BUFFER, uvBufferID);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+
+    glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), position);
+    modelMatrix = glm::scale(modelMatrix, scale);
+    glm::mat4 mvp = viewProjectionMatrix * modelMatrix;
+
+    glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
+    glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
+    glUniform3fv(viewPosID, 1, &cameraPos[0]);
+
+    int lastMaterialID = -1;
+    size_t startIndex = 0;
+
+    for (size_t i = 0; i < material_indices.size(); i++) {
+        int currentMaterialID = material_indices[i];
+
+        if (currentMaterialID != lastMaterialID) {
+            // Draw the previous block (if any)
+            if (lastMaterialID >= 0) {
+                size_t count = i - startIndex;
+                glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)(startIndex * sizeof(unsigned int)));
+            }
+
+            // Change material
+            if (currentMaterialID >= 0 && currentMaterialID < materials.size()) {
+                const MaterialAir& material = materials[currentMaterialID];
+
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, material.diffuseMap);
+                glUniform1i(glGetUniformLocation(programID, "diffuseTexture"), 0);
+
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, material.specularMap);
+                glUniform1i(glGetUniformLocation(programID, "specularTexture"), 1);
+
+                glActiveTexture(GL_TEXTURE2);
+                glBindTexture(GL_TEXTURE_2D, material.normalMap);
+                glUniform1i(glGetUniformLocation(programID, "normalMap"), 2);
+
+                glActiveTexture(GL_TEXTURE3);
+                glBindTexture(GL_TEXTURE_2D, material.reflectionMap);
+                glUniform1i(glGetUniformLocation(programID, "reflectionMap"), 3);
+
+                // Set material properties
+                glUniform1f(glGetUniformLocation(programID, "shininess"), material.shininess);
+                glUniform1f(glGetUniformLocation(programID, "opacity"), material.opacity);
+                glUniform3fv(glGetUniformLocation(programID, "diffuseColor"), 1, &material.diffuseColor[0]);
+                glUniform3fv(glGetUniformLocation(programID, "specularColor"), 1, &material.specularColor[0]);
+                glUniform3fv(glGetUniformLocation(programID, "ambientColor"), 1, &material.ambientColor[0]);
+
+                startIndex = i;
+            }
+        }
+
+        lastMaterialID = currentMaterialID;
+    }
+
+    GLint contourUniformLocation = glGetUniformLocation(programID, "enableContour");
+    GLint viewPosLocation = glGetUniformLocation(programID, "viewPos");
+
+    // Configurar la posición de la vista
+    glUniform3fv(viewPosLocation, 1, &cameraPos[0]);
+
+    // Establecer si se habilita el contorno
+    glUniform1i(contourUniformLocation, isInteractable ? 1 : 0);
+
+    size_t count = material_indices.size() - startIndex;
+    glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)(startIndex * sizeof(unsigned int)));
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
+}
+
+
+
+
+    void setupFloatingAnimation() {
         keyframes.clear();
 
         const int numKeyframes = 12;
@@ -434,37 +487,6 @@ struct Aircraft : public Entity {
         return interpolatedPos;
     }
 
-    void update(float deltaTime) {
-        currentTime += deltaTime * floatSpeed;
-
-        float cyclePosition = fmod(currentTime, animationDuration) / animationDuration;
-
-        float angle = cyclePosition * 2.0f * M_PI;
-
-        float baseOffset = sin(angle);
-
-        float transitionZone = 0.2f;
-
-        float distToTop = abs(angle - M_PI * 0.5f);
-        float distToBottom = abs(angle - M_PI * 1.5f);
-        float minDist = std::min(distToTop, distToBottom);
-
-        float verticalOffset;
-        if (minDist < transitionZone) {
-            float t = 1.0f - (minDist / transitionZone);
-            float smoothFactor = smoothEaseInOut(t);
-
-            if (distToTop < distToBottom) {
-                verticalOffset = floatAmplitude * (1.0f - (1.0f - smoothFactor) * (1.0f - sin(angle)));
-            } else {
-                verticalOffset = floatAmplitude * (-1.0f + (1.0f - smoothFactor) * (1.0f + sin(angle)));
-            }
-        } else {
-            verticalOffset = floatAmplitude * baseOffset;
-        }
-
-        position = basePosition + glm::vec3(0.0f, verticalOffset, 0.0f);
-    }
 
 
     void loadMaterials(const std::vector<tinyobj::material_t>& materials_obj, const char* materialBaseDir) {

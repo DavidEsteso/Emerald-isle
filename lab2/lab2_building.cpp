@@ -1,44 +1,26 @@
+#include <city.h>
 
-#include <glad/gl.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
-#include <vector>
-#include <cstdlib>
-#include <ctime>
-#include <render/shader.h>
-#include <math.h>
-#include <unordered_map>
-#include <cmath>
-#include <fastNoiseLite.h>
-#include <random>
-#include <building.h>
-#include <ground.h>
-#include <memory>
 #include <tree.h>
 #include <aircraft.h>
 #include <entity.h>
 #include <sky.h>
-#include <city.h>
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
 
+#include <cmath>
+#include <building.h>
+#include <ground.h>
+#include <memory>
 
+#include <sstream>
+#include <iomanip>
 
 static GLFWwindow *window;
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
 static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
-// OpenGL camera view parameters
-static glm::vec3 eye_center(300.0f, 600.0f, 300.0f); // Position the camera inside the cube
-static glm::vec3 lookat(0, 1, 1);
-static glm::vec3 up(0, 1, 0);
 
-// View control
-float viewPolar = glm::radians(60.0f);
-float viewAzimuth = glm::radians(45.0f);
-static float viewDistance = 400.0f;
-
-glm::vec3 front = glm::normalize(lookat - eye_center);
 
 float yaw = glm::degrees(atan2(front.z, front.x));
 
@@ -53,7 +35,6 @@ const char* skyTexturePaths[6] = {
 	"../lab2/textures/cube_up.png",
 	"../lab2/textures/cube_down.png"
 };
-
 
 
 int main(void)
@@ -85,7 +66,9 @@ int main(void)
 	glfwSetKeyCallback(window, key_callback);
 
 	glfwSetCursorPosCallback(window, mouse_callback);
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+
 
 	// Load OpenGL functions, gladLoadGL returns the loaded version, 0 on error.
 	int version = gladLoadGL(glfwGetProcAddress);
@@ -109,9 +92,11 @@ int main(void)
 	float height = 80.0f;
 
 
-    InfiniteCity city;
+
 	float currentTime = 0.0f;
-	city.initializeShadowMapping();
+	//city.initializeShadowMapping();
+	InfiniteCity city(window);
+
 
 	Tree tree;
 	glm::vec3 tree_position = glm::vec3(eye_center.x + front.x * 600.0f, 0.0f, eye_center.z + front.z * 600.0f);
@@ -143,9 +128,30 @@ int main(void)
 	glm::float32 zFar = 1000.0f;
 	projectionMatrix = glm::perspective(glm::radians(FoV), 4.0f / 3.0f, zNear, zFar);
 
+	static double lastTime = glfwGetTime();
+	float time = 0.0f;			// Animation time
+	float fTime = 0.0f;			// Time for measuring fps
+	unsigned long frames = 0;
+
+	bool hasInteracted = false;
+	float cameraWobblePhase = 0.0f;
+	const float WOBBLE_SPEED = 2.0f;
+	const float WOBBLE_AMOUNT = 0.00005f;
+
 	do
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// Update states for animatio
+        double currentTime = glfwGetTime();
+        float deltaTime = float(currentTime - lastTime);
+		lastTime = currentTime;
+
+		if (hasInteracted) {
+			cameraWobblePhase += deltaTime * WOBBLE_SPEED;
+			eye_center.y += sin(cameraWobblePhase) * WOBBLE_AMOUNT;
+		}
+
 
 
 		viewMatrix = glm::lookAt(eye_center, lookat, up);
@@ -166,7 +172,27 @@ int main(void)
 		city.update(eye_center);
 		city.render(vp, viewMatrix, projectionMatrix, eye_center);
 
+		//si s epulsa enter
+		if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS && !hasInteracted) {
+			glm::vec3 aircraftPos = city.handleAircraftInteraction(eye_center, viewMatrix, projectionMatrix);
+			hasInteracted = true;
+			eye_center = aircraftPos;
+			eye_center.y += 50.0f;
+		}
 
+
+		frames++;
+		fTime += deltaTime;
+		if (fTime > 2.0f)
+		{
+			float fps = frames / fTime;
+
+			frames = 0;
+			fTime = 0;
+
+			std::stringstream stream;
+			stream << std::fixed << std::setprecision(2) << "Lab 4 | Frames per second (FPS): " << fps;
+		}
 		// Swap buffers
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -184,52 +210,49 @@ int main(void)
 	return 0;
 }
 
+float mouseSensitivity = 0.5f;
+
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    // Get window size dynamically
-    int windowWidth, windowHeight;
-    glfwGetWindowSize(window, &windowWidth, &windowHeight);
+	int windowWidth, windowHeight;
+	glfwGetWindowSize(window, &windowWidth, &windowHeight);
 
-    // Calculate screen center dynamically
-    static float lastX = static_cast<float>(windowWidth) / 2.0f;
-    static float lastY = static_cast<float>(windowHeight) / 2.0f;
-    static bool firstMouse = true;
+	static float lastX = static_cast<float>(windowWidth) / 2.0f;
+	static float lastY = static_cast<float>(windowHeight) / 2.0f;
+	static bool firstMouse = true;
 
-    if (firstMouse) {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
+	if (firstMouse) {
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
 
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos;  // Reversed since y-coordinates go from bottom to top
-    lastX = xpos;
-    lastY = ypos;
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos;
+	lastX = xpos;
+	lastY = ypos;
 
-    const float sensitivity = 0.1f;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
+	xoffset *= mouseSensitivity;
+	yoffset *= mouseSensitivity;
 
-    yaw += xoffset;
-    pitch += yoffset;
+	yaw += xoffset;
+	pitch += yoffset;
 
-    // Constrain pitch
-    if (pitch > 89.0f)
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
+	if (pitch > 89.0f)
+		pitch = 89.0f;
+	if (pitch < -89.0f)
+		pitch = -89.0f;
 
-    // Calculate new front vector
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    lookat = eye_center + glm::normalize(front);
+	glm::vec3 front;
+	front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	front.y = sin(glm::radians(pitch));
+	front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	lookat = eye_center + glm::normalize(front);
 }
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
     const float cameraSpeed = 20.0f;
-    const float minHeight = 100.0f;
+    const float minHeight = 0.0f;
     const float maxHeight = 300.0f;
 
     // Camera movement with WASD
@@ -270,4 +293,8 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     // Escape to close window
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
+
+
+
+
 }
