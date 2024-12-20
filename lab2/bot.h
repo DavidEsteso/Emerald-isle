@@ -515,13 +515,7 @@ struct MyBot : public Entity{
 
 		glUseProgram(programID);
 
-		// Configura el depth testing
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);  // Configura la función de comparación de profundidad
 
-		// Si estás usando blending (transparencias), también configúralo
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		glm::mat4 mvp = cameraMatrix * modelMatrix;
 		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);

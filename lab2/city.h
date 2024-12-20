@@ -33,7 +33,9 @@
 #include <sky.h>
 #include <bot.h>
 #include <stb_image_write.h>
-
+#include <spire.h>
+#include <obelisc.h>
+#include <tea.h>
 
 
 // OpenGL camera view parameters
@@ -191,11 +193,11 @@ struct InfiniteCity {
 			glm::vec3(20, 20, 20)
 		);
 
-		//botTemplate = std::make_shared<MyBot>();
-		//botTemplate->initialize(
-		//	glm::vec3(0, 0, 0),
-		//	glm::vec3(1, 1, 1)
-		//);
+		botTemplate = std::make_shared<MyBot>();
+		botTemplate->initialize(
+			glm::vec3(0, 0, 0),
+			glm::vec3(1, 1, 1)
+		);
 	}
 
 	ChunkCoord getCurrentChunk(const glm::vec3& cameraPos) {
@@ -249,6 +251,16 @@ void generateChunk(const ChunkCoord& coord) {
             coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
         ));
         chunkEntities.push_back(ground);
+
+    	//render a bot
+        auto bot = std::make_shared<MyBot>(*botTemplate);
+    	bot->setPosition(glm::vec3(
+    	coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
+		0,
+		coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
+		));
+    	chunkEntities.push_back(bot);
+
     }
     // Área reservada alrededor del spawn
     else if (std::abs(coord.x) <= 4 && std::abs(coord.z) <= 4) {
@@ -332,10 +344,11 @@ void generateChunk(const ChunkCoord& coord) {
 	}
 
 	void render(glm::mat4 vp, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, glm::vec3 eye) {
+
 		for (const auto& [_, chunk] : currentChunks) {
 			for (auto& entity : chunk) {
 				if (auto bot = std::dynamic_pointer_cast<MyBot>(entity)) {
-					//bot->render(vp);
+					bot->render(vp);
 				} else if (auto ground = std::dynamic_pointer_cast<Ground>(entity)) {
 					ground->render(vp, 0, glm::mat4(1.0f));
 				} else if (auto aircraft = std::dynamic_pointer_cast<Aircraft>(entity)) {

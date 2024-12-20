@@ -387,6 +387,8 @@ struct Building : public Entity{
 	}
     void render(glm::mat4 cameraMatrix, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, glm::vec3 eye_center, GLuint shadowMapTexture, glm::mat4 lightSpaceMatrix) {
 		glUseProgram(programID);
+		glBindVertexArray(vertexArrayID);
+
 
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);

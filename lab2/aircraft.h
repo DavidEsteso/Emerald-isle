@@ -285,6 +285,8 @@ struct Aircraft : public Entity {
 
 void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
         // Static time tracking to ensure consistent animation across frames
+        glBindVertexArray(vertexArrayID);
+
         static auto startTime = std::chrono::high_resolution_clock::now();
         auto currentRenderTime = std::chrono::high_resolution_clock::now();
 

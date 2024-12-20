@@ -106,7 +106,7 @@ int main(void)
 
 
 	Tree tree;
-	glm::vec3 tree_position = glm::vec3(eye_center.x + front.x * 600.0f, 0, eye_center.z + front.z * 600.0f);
+	glm::vec3 tree_position = glm::vec3(eye_center.x + front.x * 50.0f, 100, eye_center.z + front.z * 50.0f);
 	//tree.initialize(tree_position, glm::vec3(50.0f, 50.0f, 50.0f));
 
 	//Building b;
@@ -122,13 +122,18 @@ int main(void)
 	//Sky sky;
 	//sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(500.0f, 500.0f, 500.0f), skyTexturePaths);
 
-	//MyBot bot;
-	//bot.initialize();
-	//bot.setScale(glm::vec3(5.0f, 5.0f, 5.0f));
-	//bot.setPosition(tree_position);
+	MyBot bot;
+	bot.initialize(tree_position, glm::vec3(1, 1, 1));
 
-	SimpleModel tea;
+
+	Tea tea;
 	tea.initialize(tree_position, glm::vec3(1, 1, 1));
+
+	Spire spire;
+	spire.initialize(tree_position, glm::vec3(1, 1, 1));
+
+	Obelisc obelisc;
+	obelisc.initialize(tree_position, glm::vec3(1, 1, 1));
 
 
 
@@ -184,10 +189,13 @@ int main(void)
 		//b.render(vp, viewMatrix, projectionMatrix, eye_center);
 		//ground.render(vp);
 		// Render the building
-		//city.update(eye_center);
-		//city.render(vp, viewMatrix, projectionMatrix, eye_center);
+		city.update(eye_center);
+		city.render(vp, viewMatrix, projectionMatrix, eye_center);
 
-		tea.render(vp, eye_center);
+		//obelisc.render(vp, eye_center);
+
+		//bot.render(vp);
+
 		//tree.render(vp, eye_center);
 
 		//get the bots of the city
@@ -202,7 +210,7 @@ int main(void)
 		//		myBot->update(currentTime);
 		//	}
 		//}
-		//bot.render(vp);
+
 
 		if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS && !hasInteracted) {
 			auto [aircraftPos, aircraftFound] = city.handleAircraftInteraction(eye_center, viewMatrix, projectionMatrix);

@@ -187,6 +187,9 @@ struct Tree : public Entity {
     void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
         glUseProgram(programID);
 
+        glBindVertexArray(vertexArrayID);
+
+
         glEnableVertexAttribArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);

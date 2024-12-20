@@ -17,7 +17,7 @@
 #include <iostream>
 #include <unordered_map>
 
-struct SimpleModel : public Entity {
+struct Tea : public Entity {
     glm::vec3 position;
     glm::vec3 scale;
 
@@ -130,13 +130,17 @@ struct SimpleModel : public Entity {
         viewPosID = glGetUniformLocation(programID, "viewPos");
 
         // make the model longer in y axis
-        scale.z = 10.0f;
         rotation.z = 90.0f;
+
+    //bigger scale
+        scale = glm::vec3(10.0f, 10.0f, 10.0f);
 
     }
 
     void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
         glUseProgram(programID);
+
+        glBindVertexArray(vertexArrayID);
 
         // Enable vertex attributes
         glEnableVertexAttribArray(0);

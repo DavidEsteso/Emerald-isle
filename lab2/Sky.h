@@ -255,6 +255,9 @@ struct Sky {
 	void render(glm::mat4 cameraMatrix) {
 		glUseProgram(programID);
 
+		glBindVertexArray(vertexArrayID);
+
+
 		// Vertex positions
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
