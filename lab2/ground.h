@@ -110,6 +110,8 @@ struct Ground : public Entity {
 	GLuint lightIntensityID;
 	GLuint lightColorID;
 
+	bool ground = false;
+
 	void initialize(glm::vec3 position, glm::vec3 scale, const char* texturePath) {
 
 		// Define scale of the building geometry
@@ -169,6 +171,14 @@ struct Ground : public Entity {
         // --------------------
 		textureID = LoadTextureTileBox(texturePath);
         // --------------------
+
+		// si el texture paz acaba en facade3.jpg le paso un 1 al shader sino un 0
+		if (std::string(texturePath).find("AIRGROUND.png") != std::string::npos)
+		{
+			ground = true;
+		}
+		std::cout << "ground: " << ground << std::endl;
+
 
         // TODO: Get a handle to texture sampler--DONE
         // -------------------------------------
@@ -271,6 +281,19 @@ struct Ground : public Entity {
 		//pass lightSpaceMatrix to shader
 		GLuint lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");
 		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+
+		GLuint groundID = glGetUniformLocation(programID, "ground");
+		glUniform1i(groundID, 0);
+
+
+		// si ground es true paso un 1 al shader sino un 0
+		if (ground)
+		{
+			GLuint groundID = glGetUniformLocation(programID, "ground");
+			glUniform1i(groundID, 1);
+		}
+
+
 
 
 

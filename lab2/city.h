@@ -30,9 +30,9 @@
 #include <tree.h>
 #include <aircraft.h>
 #include <entity.h>
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb/stb_image_write.h>
+#include <sky.h>
+#include <bot.h>
+#include <stb_image_write.h>
 
 
 
@@ -97,14 +97,18 @@ struct InfiniteCity {
 	// Templates de objetos base
 	std::vector<std::shared_ptr<Building>> buildingTemplates;
 	std::shared_ptr<Ground> groundTemplate;
+	std::shared_ptr<Ground> roadGroundTemplate;
+
 	std::shared_ptr<Aircraft> aircraftTemplate;
+	std::shared_ptr<MyBot> botTemplate;
+
 
 	std::unordered_map<ChunkCoord, std::vector<std::shared_ptr<Entity>>, ChunkCoordHash> currentChunks;
 
 
 
-    const int CHUNK_SIZE = 192;        // Size of chunk (6 buildings * (32*2 + 6))
-    const int RENDER_DISTANCE = 4;      // How many chunks to render in each direction
+    const int CHUNK_SIZE = 192 *2;        // Size of chunk (6 buildings * (32*2 + 6))
+    const int RENDER_DISTANCE = 8;      // How many chunks to render in each direction
     const float STREET_WIDTH = 6.0f;    // Width of streets between buildings
     const int BUILDINGS_PER_ROW = 1;    // Number of buildings per row in a chunk
 	const float AIRCRAFT_SPAWN_PROBABILITY = 0.0f; // 50% chance of spawning an aircraft
@@ -165,15 +169,21 @@ struct InfiniteCity {
 		buildingTemplates[0]->initialize(
 			glm::vec3(0, 0, 0),
 			glm::vec3(32, 32, 32),
-			"../lab2/textures/cube"
+			"../lab2/textures/cube_"
 		);
 
 		groundTemplate = std::make_shared<Ground>();
 		groundTemplate->initialize(
 			glm::vec3(0, 0, 0),
-			glm::vec3(CHUNK_SIZE, 1, CHUNK_SIZE),
-			"../lab2/textures/cube_right.png"
+			glm::vec3(CHUNK_SIZE/2, 1, CHUNK_SIZE/2),
+			"../lab2/textures/facade2.jpg"
 		);
+
+		roadGroundTemplate = std::make_shared<Ground>();
+		roadGroundTemplate->initialize(
+			glm::vec3(0, 0, 0),
+			glm::vec3(CHUNK_SIZE/2, 1, CHUNK_SIZE/2),
+			"../lab2/textures/cube_up.png" );
 
 		aircraftTemplate = std::make_shared<Aircraft>();
 		aircraftTemplate->initialize(
@@ -181,6 +191,11 @@ struct InfiniteCity {
 			glm::vec3(20, 20, 20)
 		);
 
+		//botTemplate = std::make_shared<MyBot>();
+		//botTemplate->initialize(
+		//	glm::vec3(0, 0, 0),
+		//	glm::vec3(1, 1, 1)
+		//);
 	}
 
 	ChunkCoord getCurrentChunk(const glm::vec3& cameraPos) {
@@ -201,18 +216,30 @@ struct InfiniteCity {
 void generateChunk(const ChunkCoord& coord) {
     std::vector<std::shared_ptr<Entity>> chunkEntities;
 
+    // Añadir marcador negro en el centro del chunk
+    auto centerMarker = std::make_shared<Building>(*buildingTemplates[0]);
+    centerMarker->setScale(glm::vec3(4, 4, 4)); // Pequeño cubo de 4x4x4
+    centerMarker->setPosition(glm::vec3(
+        coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
+        2, // Ligeramente elevado para ser visible
+        coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
+    ));
+    // Hacer el marcador negro
+    chunkEntities.push_back(centerMarker);
+
+    // Manejo del chunk de spawn (centro)
     if (coord.x == 0 && coord.z == 0) {
         auto aircraft = std::make_shared<Aircraft>(*aircraftTemplate);
         aircraft->setPosition(glm::vec3(
             coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-            0,
+            100,
             coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
         ));
         chunkEntities.push_back(aircraft);
 
         auto ground = std::make_shared<Ground>(*groundTemplate);
         ground->initialize(
-            glm::vec3(coord.x * CHUNK_SIZE, 100, coord.z * CHUNK_SIZE),
+            glm::vec3(coord.x * CHUNK_SIZE, 0, coord.z * CHUNK_SIZE),
             glm::vec3(CHUNK_SIZE, 1, CHUNK_SIZE),
             "../lab2/textures/AIRGROUND.png"
         );
@@ -223,46 +250,66 @@ void generateChunk(const ChunkCoord& coord) {
         ));
         chunkEntities.push_back(ground);
     }
-    else if (std::abs(coord.x) <= 2 && std::abs(coord.z) <= 2) {
+    // Área reservada alrededor del spawn
+    else if (std::abs(coord.x) <= 4 && std::abs(coord.z) <= 4) {
         return;
     }
     else {
-        auto ground = std::make_shared<Ground>(*groundTemplate);
-        ground->setPosition(glm::vec3(
-            coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-            0,
-            coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-        ));
-        chunkEntities.push_back(ground);
+        bool isRoad = ((coord.x) % 3 == 0) || ((coord.z) % 3 == 0);
 
-        auto building = std::make_shared<Building>(*buildingTemplates[0]);
-
-    	float randomHeight = 32.0f + rand() % 64;
-
-    	building->setScale(glm::vec3(32, randomHeight, 32));
-
-    	building->setPosition(glm::vec3(
-			coord.x * CHUNK_SIZE + 50,
-			randomHeight ,
-			coord.z * CHUNK_SIZE + 50
-		));
-
-        chunkEntities.push_back(building);
-
-        if (rand() % 100 < 20) {
-            auto aircraft = std::make_shared<Aircraft>(*aircraftTemplate);
-            aircraft->setPosition(glm::vec3(
+        if (isRoad) {
+            auto road = std::make_shared<Ground>(*roadGroundTemplate);
+            road->setPosition(glm::vec3(
                 coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-                100 + rand() % 50,
+                0,
                 coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
             ));
-            chunkEntities.push_back(aircraft);
+            chunkEntities.push_back(road);
+        } else {
+            auto ground = std::make_shared<Ground>(*groundTemplate);
+            ground->setPosition(glm::vec3(
+                coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
+                0,
+                coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
+            ));
+            chunkEntities.push_back(ground);
+
+            // Calculamos la posición dentro de la manzana
+            int blockX = std::abs(coord.x) % 3;
+            int blockZ = std::abs(coord.z) % 3;
+
+            // Usamos las coordenadas como seed para la generación consistente
+            std::seed_seq seed{coord.x, coord.z};
+            std::mt19937 rng(seed);
+
+            // Calculamos el número de edificios y su espaciado
+            const int BUILDINGS_IN_CHUNK = 4;
+            const float BUILDING_SPACING = (CHUNK_SIZE - STREET_WIDTH * 2) / 2;
+
+            // Generamos edificios en una cuadrícula 2x2
+            for (int x = 0; x < 2; x++) {
+                for (int z = 0; z < 2; z++) {
+                    float randomHeight = 32.0f + (rng() % 96);
+                    auto building = std::make_shared<Building>(*buildingTemplates[0]);
+
+                    float posX = coord.x * CHUNK_SIZE + STREET_WIDTH + x * BUILDING_SPACING + BUILDING_SPACING/2;
+                    float posZ = coord.z * CHUNK_SIZE + STREET_WIDTH + z * BUILDING_SPACING + BUILDING_SPACING/2;
+
+                    building->setScale(glm::vec3(32, randomHeight, 32));
+                    building->setPosition(glm::vec3(
+                        posX,
+                        randomHeight,
+                        posZ
+                    ));
+
+                    chunkEntities.push_back(building);
+                }
+            }
         }
     }
 
     currentChunks[coord] = chunkEntities;
 }
-
 
 	void update(const glm::vec3& cameraPos) {
 
@@ -287,12 +334,14 @@ void generateChunk(const ChunkCoord& coord) {
 	void render(glm::mat4 vp, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, glm::vec3 eye) {
 		for (const auto& [_, chunk] : currentChunks) {
 			for (auto& entity : chunk) {
-				if (auto building = std::dynamic_pointer_cast<Building>(entity)) {
-					building->render(vp, viewMatrix, projectionMatrix, eye, 0, glm::mat4(1.0f));
+				if (auto bot = std::dynamic_pointer_cast<MyBot>(entity)) {
+					//bot->render(vp);
 				} else if (auto ground = std::dynamic_pointer_cast<Ground>(entity)) {
 					ground->render(vp, 0, glm::mat4(1.0f));
 				} else if (auto aircraft = std::dynamic_pointer_cast<Aircraft>(entity)) {
 					aircraft->render(vp, eye);
+				} else if (auto building = std::dynamic_pointer_cast<Building>(entity)) {
+					building->render(vp, viewMatrix, projectionMatrix, eye, 0, glm::mat4(1.0f));
 				}
 			}
 		}
@@ -401,22 +450,24 @@ void generateChunk(const ChunkCoord& coord) {
         return nullptr;
     }
 
-    glm::vec3 handleAircraftInteraction(
-        const glm::vec3& cameraPos,
-        const glm::mat4& viewMatrix,
-        const glm::mat4& projectionMatrix
-    ) {
-        currentInteractableAircraft = findInteractableAircraftInFrustum(
-            cameraPos, projectionMatrix, viewMatrix
-        );
+	std::pair<glm::vec3, bool> handleAircraftInteraction(
+		const glm::vec3& cameraPos,
+		const glm::mat4& viewMatrix,
+		const glm::mat4& projectionMatrix
+	)
+	{
+		currentInteractableAircraft = findInteractableAircraftInFrustum(
+			cameraPos, projectionMatrix, viewMatrix
+		);
 
-        if (currentInteractableAircraft && !aircraftFound) {
-            currentInteractableAircraft->onInteract();
-            aircraftFound = true;
-        	return currentInteractableAircraft->getPosition();
-
-        }
-    }
+		if (currentInteractableAircraft && !aircraftFound) {
+			currentInteractableAircraft->onInteract();
+			aircraftFound = true;
+			return {currentInteractableAircraft->getPosition(), true};
+		} else {
+			return {glm::vec3(0.0f), false};
+		}
+	}
 
 	void cleanup() {
     	for (auto& chunk : chunks) {
@@ -442,6 +493,19 @@ void generateChunk(const ChunkCoord& coord) {
 		for (const auto& coord : chunksToRemove) {
 			currentChunks.erase(coord);
 		}
+	}
+
+	//methos that returns all the bots in the city
+	std::vector<std::shared_ptr<MyBot>> getBots() {
+		std::vector<std::shared_ptr<MyBot>> bots;
+		for (const auto& [_, chunk] : currentChunks) {
+			for (auto& entity : chunk) {
+				if (auto bot = std::dynamic_pointer_cast<MyBot>(entity)) {
+					bots.push_back(bot);
+				}
+			}
+		}
+		return bots;
 	}
 };
 

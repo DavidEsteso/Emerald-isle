@@ -2,5 +2,5 @@
 -- Using Win32 for window creation
 -- Using WGL for context creation
 -- Configuring done (0.5s)
--- Generating done (0.1s)
+-- Generating done (0.0s)
 -- Build files have been written to: C:/CG/lab2/cmake-build-debug

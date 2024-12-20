@@ -44,6 +44,7 @@ struct MaterialAir {
     glm::vec3 diffuseColor;
     glm::vec3 specularColor;
     glm::vec3 ambientColor;
+
 };
 
 GLuint LoadTextureAir(const std::string& path) {
@@ -78,7 +79,6 @@ GLuint LoadTextureAir(const std::string& path) {
         if (!data) {
             std::cerr << "Failed to load texture data: " << normalizedPath << std::endl;
             std::cerr << "STB Error: " << stbi_failure_reason() << std::endl;
-            // Crear una textura gris por defecto
             unsigned char defaultColor[] = {128, 128, 128, 255};
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, defaultColor);
             return textureID;
@@ -185,7 +185,7 @@ struct Aircraft : public Entity {
         floatScale = 1.5f;
         floatSpeed = 0.5f;
         currentTime = 0.0f;
-        animationDuration = 4.0f;
+        animationDuration = 6.0f;
 
         moveRange.minHeight = -5.0f;
         moveRange.maxHeight = 5.0f;
@@ -284,53 +284,54 @@ struct Aircraft : public Entity {
 
 
 void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
-    // Static time tracking to ensure consistent animation across frames
-    static auto startTime = std::chrono::high_resolution_clock::now();
-    auto currentRenderTime = std::chrono::high_resolution_clock::now();
+        // Static time tracking to ensure consistent animation across frames
+        static auto startTime = std::chrono::high_resolution_clock::now();
+        auto currentRenderTime = std::chrono::high_resolution_clock::now();
 
-    // Calculate total elapsed time
-    float totalElapsedTime = std::chrono::duration<float>(currentRenderTime - startTime).count();
+        // Calculate total elapsed time
+        float totalElapsedTime = std::chrono::duration<float>(currentRenderTime - startTime).count();
 
-    // Ajustes para más rango y velocidad
-    float floatSpeed = 2.0f;       // Incrementa para mayor velocidad (original era menor)
-    float floatAmplitude = 1.5f;   // Incrementa para mayor amplitud del movimiento
-    float animationDuration = 2.0f; // Ajusta si quieres que el ciclo dure más o menos tiempo
+        float floatSpeed = 2.0f;       // Speed of floating animation
+        float floatAmplitude = 1.5f;  // Maximum vertical offset
+        float animationDuration = 2.0f; // Full animation cycle duration
 
-    static float lastVerticalOffset = 0.0f; // Mantener el último desplazamiento calculado
+        static float lastVerticalOffset = 0.0f; // Tracks last vertical offset
 
-    float verticalOffset;
-    if (!isInteractable) {
-        // Actualizar movimiento si no es interactuable
-        float cyclePosition = fmod(totalElapsedTime * floatSpeed, animationDuration) / animationDuration;
-        float angle = cyclePosition * 2.0f * M_PI;
+        float verticalOffset;
+        if (!isInteractable) {
+            // Calculate the current position in the animation cycle
+            float cyclePosition = fmod(totalElapsedTime * floatSpeed, animationDuration) / animationDuration;
+            float angle = cyclePosition * 2.0f * M_PI;
 
-        float baseOffset = sin(angle);
+            float baseOffset = sin(angle); // Sinusoidal movement
 
-        float transitionZone = 0.2f;
+            float transitionZone = 0.1f; // Zone for smooth transition
 
-        float distToTop = abs(angle - M_PI * 0.5f);
-        float distToBottom = abs(angle - M_PI * 1.5f);
-        float minDist = std::min(distToTop, distToBottom);
+            float distToTop = abs(angle - M_PI * 0.5f);
+            float distToBottom = abs(angle - M_PI * 1.5f);
+            float minDist = std::min(distToTop, distToBottom);
 
-        if (minDist < transitionZone) {
-            float t = 1.0f - (minDist / transitionZone);
-            float smoothFactor = smoothEaseInOut(t);
+            if (minDist < transitionZone) {
+                float t = 1.0f - (minDist / transitionZone);
+                float smoothFactor = t * t; // Quadratic for sharper transitions
 
-            if (distToTop < distToBottom) {
-                verticalOffset = floatAmplitude * (1.0f - (1.0f - smoothFactor) * (1.0f - sin(angle)));
+                // Adjust vertical offset based on position (top or bottom)
+                if (distToTop < distToBottom) {
+                    verticalOffset = floatAmplitude * (1.0f - (1.0f - smoothFactor) * (1.0f - sin(angle)));
+                } else {
+                    verticalOffset = floatAmplitude * (-1.0f + (1.0f - smoothFactor) * (1.0f + sin(angle)));
+                }
             } else {
-                verticalOffset = floatAmplitude * (-1.0f + (1.0f - smoothFactor) * (1.0f + sin(angle)));
+                verticalOffset = floatAmplitude * baseOffset; // Standard sine-based movement
             }
+
+            lastVerticalOffset = verticalOffset; // Save last offset
         } else {
-            verticalOffset = floatAmplitude * baseOffset;
+            // Fix the position when interactable
+            verticalOffset = 0.0f;
+
         }
 
-        // Guardar el último desplazamiento
-        lastVerticalOffset = verticalOffset;
-    } else {
-        // Mantener el último desplazamiento cuando es interactuable
-        verticalOffset = lastVerticalOffset;
-    }
 
     // Update position in-place
     position = basePosition + glm::vec3(0.0f, verticalOffset, 0.0f);
@@ -414,7 +415,7 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
     glUniform3fv(viewPosLocation, 1, &cameraPos[0]);
 
     // Establecer si se habilita el contorno
-    glUniform1i(contourUniformLocation, isInteractable ? 1 : 0);
+    glUniform1i(contourUniformLocation, isInteractable ? 1 : 1);
 
     size_t count = material_indices.size() - startIndex;
     glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)(startIndex * sizeof(unsigned int)));

@@ -22,6 +22,7 @@ include_directories(
 		external/glm-0.9.7.1/
 		external/glad-opengl-3.3/include/
 		external/tinyobjloader/
+		external/tinygltf-2.9.3/
 		external/
 		lab2/
 )
@@ -42,6 +43,11 @@ add_executable(lab2_building
 		lab2/aircraft.h
 		lab2/entity.h
 		lab2/TextRenderer.h
+		lab2/bot.h
+		external/tinygltf-2.9.3/tiny_gltf.h
+		lab2/implementations.cpp
+		external/tinygltf-2.9.3/stb_image.h
+		lab2/tea.h
 )
 
 # Link the necessary libraries to the first executable

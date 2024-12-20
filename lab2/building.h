@@ -2,9 +2,6 @@
 #define BUILDING_H
 
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
-#include <stb/stb_image_write.h>
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -12,11 +9,10 @@
 #include <vector>
 #include <cstdlib>
 #include <ctime>
-
 #include <render/shader.h>
-
-
-
+#include <stb_image.h>
+#include <stb_image_write.h>
+#include <glad/gl.h>
 #include <vector>
 #include <iostream>
 #include <math.h>
@@ -24,23 +20,21 @@
 #include <cmath>
 #include <fastNoiseLite.h>
 #include <random>
-
 #include "entity.h"
+
 
 
 GLuint LoadCubeMap(const char* cubemapDir) {
 	GLuint textureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
 	const char* faces[6] = {
 		"right.png", "left.png",
 		"up.png", "down.png",
 		"front.png", "back.png"
 	};
-
 	for (unsigned int i = 0; i < 6; i++) {
-		std::string filename = std::string(cubemapDir) + "_" + faces[i];
+		std::string filename = std::string(cubemapDir) + "" + faces[i];
 		// Load image, create OpenGL texture
 		int width, height, channels;
 		unsigned char* data = stbi_load(filename.c_str(), &width, &height, &channels, 0);
@@ -54,13 +48,11 @@ GLuint LoadCubeMap(const char* cubemapDir) {
 			std::cerr << "Cubemap texture failed to load: " << filename << std::endl;
 		}
 	}
-
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
 	return textureID;
 }
 
@@ -204,38 +196,41 @@ struct Building : public Entity{
 	};
 
 	GLfloat normal_buffer_data[72] = {
+		// Front face
+		0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f,
 		0.0f, 0.0f, 1.0f,
 		0.0f, 0.0f, 1.0f,
 
-		0.0f, 0.0f, 1.0f,
-
-		0.0f, 0.0f, 1.0f,
-
+		// Back face
 		0.0f, 0.0f, -1.0f,
 		0.0f, 0.0f, -1.0f,
 		0.0f, 0.0f, -1.0f,
 		0.0f, 0.0f, -1.0f,
 
+		// Left face
 		-1.0f, 0.0f, 0.0f,
 		-1.0f, 0.0f, 0.0f,
 		-1.0f, 0.0f, 0.0f,
 		-1.0f, 0.0f, 0.0f,
 
+		// Right face
 		1.0f, 0.0f, 0.0f,
 		1.0f, 0.0f, 0.0f,
 		1.0f, 0.0f, 0.0f,
 		1.0f, 0.0f, 0.0f,
 
+		// Top face
 		0.0f, 1.0f, 0.0f,
 		0.0f, 1.0f, 0.0f,
 		0.0f, 1.0f, 0.0f,
 		0.0f, 1.0f, 0.0f,
 
+		// Bottom face
 		0.0f, -1.0f, 0.0f,
 		0.0f, -1.0f, 0.0f,
 		0.0f, -1.0f, 0.0f,
 		0.0f, -1.0f, 0.0f
-
 	};
     // ---------------------------
 

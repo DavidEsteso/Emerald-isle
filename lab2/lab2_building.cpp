@@ -1,3 +1,7 @@
+#include <glad/gl.h>
+#include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+
 #include <city.h>
 
 #include <tree.h>
@@ -11,10 +15,13 @@
 #include <cmath>
 #include <building.h>
 #include <ground.h>
+#include <bot.h>
 #include <memory>
 
 #include <sstream>
 #include <iomanip>
+
+#include <tea.h>
 
 static GLFWwindow *window;
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
@@ -99,21 +106,29 @@ int main(void)
 
 
 	Tree tree;
-	glm::vec3 tree_position = glm::vec3(eye_center.x + front.x * 600.0f, 0.0f, eye_center.z + front.z * 600.0f);
-	tree.initialize(tree_position, glm::vec3(50.0f, 50.0f, 50.0f));
+	glm::vec3 tree_position = glm::vec3(eye_center.x + front.x * 600.0f, 0, eye_center.z + front.z * 600.0f);
+	//tree.initialize(tree_position, glm::vec3(50.0f, 50.0f, 50.0f));
 
-	Building b;
-	b.initialize(tree_position, glm::vec3(32.0f, 32.0f, 32.0f), "../lab2/textures/cube");
+	//Building b;
+	//b.initialize(tree_position, glm::vec3(32.0f, 32.0f, 32.0f), "../lab2/textures/cube_");
 
-	Ground ground;
-	ground.initialize(tree_position, glm::vec3(500.0f, 500.0f, 500.0f), "../lab2/textures/facade1.jpg");
+	//Ground ground;
+	//ground.initialize(tree_position, glm::vec3(500.0f, 500.0f, 500.0f), "../lab2/textures/facade1.jpg");
 
-	Aircraft aircraft;
-	glm::vec3 aircraft_pos = eye_center + front * 350.0f;
-	aircraft.initialize(aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
+	//Aircraft aircraft;
+	//glm::vec3 aircraft_pos = eye_center + front * 350.0f;
+	//aircraft.initialize(aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
 
-	Sky sky;
-	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(500.0f, 500.0f, 500.0f), skyTexturePaths);
+	//Sky sky;
+	//sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(500.0f, 500.0f, 500.0f), skyTexturePaths);
+
+	//MyBot bot;
+	//bot.initialize();
+	//bot.setScale(glm::vec3(5.0f, 5.0f, 5.0f));
+	//bot.setPosition(tree_position);
+
+	SimpleModel tea;
+	tea.initialize(tree_position, glm::vec3(1, 1, 1));
 
 
 
@@ -125,12 +140,12 @@ int main(void)
 	glm::mat4 viewMatrix, projectionMatrix, viewMatrixSky;
     glm::float32 FoV = 45;
 	glm::float32 zNear = 0.1f;
-	glm::float32 zFar = 1000.0f;
+	glm::float32 zFar = 2000.0f;
 	projectionMatrix = glm::perspective(glm::radians(FoV), 4.0f / 3.0f, zNear, zFar);
 
 	static double lastTime = glfwGetTime();
-	float time = 0.0f;			// Animation time
-	float fTime = 0.0f;			// Time for measuring fps
+	float time = 0.0f;
+	float fTime = 0.0f;
 	unsigned long frames = 0;
 
 	bool hasInteracted = false;
@@ -142,10 +157,10 @@ int main(void)
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// Update states for animatio
         double currentTime = glfwGetTime();
         float deltaTime = float(currentTime - lastTime);
 		lastTime = currentTime;
+
 
 		if (hasInteracted) {
 			cameraWobblePhase += deltaTime * WOBBLE_SPEED;
@@ -169,16 +184,37 @@ int main(void)
 		//b.render(vp, viewMatrix, projectionMatrix, eye_center);
 		//ground.render(vp);
 		// Render the building
-		city.update(eye_center);
-		city.render(vp, viewMatrix, projectionMatrix, eye_center);
+		//city.update(eye_center);
+		//city.render(vp, viewMatrix, projectionMatrix, eye_center);
 
-		//si s epulsa enter
+		tea.render(vp, eye_center);
+		//tree.render(vp, eye_center);
+
+		//get the bots of the city
+		//std::vector<std::shared_ptr<Entity>> bots;
+		//for (const auto& bot : city.getBots()) {
+		//	bots.push_back(std::static_pointer_cast<Entity>(bot));
+		//}
+
+		//update each bot
+		//for (auto& bot : bots) {
+		//	if (auto myBot = std::dynamic_pointer_cast<MyBot>(bot)) {
+		//		myBot->update(currentTime);
+		//	}
+		//}
+		//bot.render(vp);
+
 		if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS && !hasInteracted) {
-			glm::vec3 aircraftPos = city.handleAircraftInteraction(eye_center, viewMatrix, projectionMatrix);
-			hasInteracted = true;
-			eye_center = aircraftPos;
-			eye_center.y += 50.0f;
+			auto [aircraftPos, aircraftFound] = city.handleAircraftInteraction(eye_center, viewMatrix, projectionMatrix);
+
+			if (aircraftFound) {
+				std::cout << "Aircraft found at: " << aircraftPos.x << ", " << aircraftPos.y << ", " << aircraftPos.z << std::endl;
+				hasInteracted = true;
+				eye_center = aircraftPos;
+				eye_center.y += 50.0f;
+			}
 		}
+
 
 
 		frames++;
