@@ -49,7 +49,7 @@ add_executable(lab2_building
 		external/tinygltf-2.9.3/stb_image.h
 		lab2/tea.h
 		lab2/spire.h
-		lab2/obelisc.h
+        lab2/obelisk.h
 )
 
 # Link the necessary libraries to the first executable

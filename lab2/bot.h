@@ -29,7 +29,6 @@ struct MyBot : public Entity{
 	GLuint jointMatricesID;
 	GLuint lightPositionID;
 	GLuint lightIntensityID;
-	GLuint programID;
 	GLuint jointCountID;
 
 	tinygltf::Model model;
@@ -445,9 +444,10 @@ struct MyBot : public Entity{
 		return res;
 	}
 
-	void initialize(glm::vec3 position, glm::vec3 scale) {
+	void initialize(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation) {
 		this->position = position;
 		this->scale = scale;
+		this->rotation = rotation;
 
 		updateModelMatrix();
 		// Modify your path if needed
@@ -478,6 +478,8 @@ struct MyBot : public Entity{
 		{
 			std::cerr << "Failed to load shaders." << std::endl;
 		}
+
+		initLightUniforms();
 
 
 		// Get a handle for GLSL variables
@@ -515,7 +517,7 @@ struct MyBot : public Entity{
 
 		glUseProgram(programID);
 
-
+		updateModelMatrix();
 
 		glm::mat4 mvp = cameraMatrix * modelMatrix;
 		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
@@ -739,13 +741,7 @@ void bindModelNodes(std::vector<PrimitiveObject> &primitiveObjects,
 	}
 
 
-	void updateModelMatrix() override {
-		static int callCount = 0;
-		callCount++;
-		std::cout << "updateModelMatrix called: " << callCount << " times" << std::endl;
 
-		Entity::updateModelMatrix();
-	}
 
 	void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) override {
 		glUseProgram(shadowProgramID);

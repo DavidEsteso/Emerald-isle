@@ -252,7 +252,6 @@ struct Building : public Entity{
 	// Shader variable IDs
 	GLuint mvpMatrixID;
 	GLuint textureSamplerID;
-	GLuint programID;
 
 	GLuint lightPositionID;
 	GLuint lightIntensityID;
@@ -333,6 +332,8 @@ struct Building : public Entity{
 		{
 			std::cerr << "Failed to load shaders." << std::endl;
 		}
+		initLightUniforms();
+
 
 		// Get a handle for our "MVP" uniform
 		//mvpMatrixID = glGetUniformLocation(programID, "MVP");
@@ -400,10 +401,6 @@ struct Building : public Entity{
 
 		// TODO: Model transform
 		// -----------------------
-		glm::mat4 modelMatrix = glm::mat4();
-		// Scale the box along each axis to make it look like a building
-		modelMatrix = glm::translate(modelMatrix, position);
-		modelMatrix = glm::scale(modelMatrix, scale);
 
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, shadowMapTexture);

@@ -45,14 +45,12 @@ GLuint LoadTexture(const std::string& path) {
 }
 
 struct Tree : public Entity {
-    glm::vec3 position;
-    glm::vec3 scale;
 
     std::vector<float> vertex_buffer_data;
     std::vector<float> normal_buffer_data;
     std::vector<float> uv_buffer_data;
     std::vector<unsigned int> index_buffer_data;
-    std::vector<int> material_indices;  // Material index for each face
+    std::vector<int> material_indices;
 
     GLuint vertexArrayID;
     GLuint vertexBufferID;
@@ -60,14 +58,10 @@ struct Tree : public Entity {
     GLuint uvBufferID;
     GLuint indexBufferID;
 
-    GLuint programID;
     GLuint mvpMatrixID;
     GLuint modelMatrixID;
     GLuint viewPosID;
 
-    GLuint lightPositionID;
-    GLuint lightIntensityID;
-    GLuint lightColorID;
 
     std::vector<Material> materials;
 
@@ -172,13 +166,13 @@ struct Tree : public Entity {
             return;
         }
 
+        initLightUniforms();
+
+
         mvpMatrixID = glGetUniformLocation(programID, "MVP");
         modelMatrixID = glGetUniformLocation(programID, "model");
         viewPosID = glGetUniformLocation(programID, "viewPos");
 
-        lightPositionID = glGetUniformLocation(programID, "lightPosition");
-        lightIntensityID = glGetUniformLocation(programID, "lightIntensity");
-        lightColorID = glGetUniformLocation(programID, "lightColor");
 
 
     }
@@ -205,15 +199,14 @@ struct Tree : public Entity {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
 
         glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), position);
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.x), glm::vec3(-1.0f, 0.0f, 0.0f));
         modelMatrix = glm::scale(modelMatrix, scale);
+
         glm::mat4 mvp = viewProjectionMatrix * modelMatrix;
 
         glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
         glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
         glUniform3fv(viewPosID, 1, &cameraPos[0]);
-        glUniform3fv(lightPositionID, 1, &LightPosition[0]);
-        glUniform3fv(lightIntensityID, 1, &lightIntensity[0]);
-        glUniform3fv(lightColorID, 1, &LightColor[0]);
 
         int lastMaterialID = -1;
         size_t startIndex = 0;

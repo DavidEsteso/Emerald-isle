@@ -59,7 +59,7 @@ int main(void)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow(1024, 768, "Lab 2", NULL, NULL);
+	window = glfwCreateWindow(1024 * 2, 768 * 2 , "Lab 2", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cerr << "Failed to open a GLFW window." << std::endl;
@@ -107,7 +107,7 @@ int main(void)
 
 	Tree tree;
 	glm::vec3 tree_position = glm::vec3(eye_center.x + front.x * 50.0f, 100, eye_center.z + front.z * 50.0f);
-	//tree.initialize(tree_position, glm::vec3(50.0f, 50.0f, 50.0f));
+	tree.initialize(tree_position, glm::vec3(50.0f, 50.0f, 50.0f));
 
 	//Building b;
 	//b.initialize(tree_position, glm::vec3(32.0f, 32.0f, 32.0f), "../lab2/textures/cube_");
@@ -119,21 +119,22 @@ int main(void)
 	//glm::vec3 aircraft_pos = eye_center + front * 350.0f;
 	//aircraft.initialize(aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
 
-	//Sky sky;
-	//sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(500.0f, 500.0f, 500.0f), skyTexturePaths);
+	Sky sky;
+	//sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(2000.0f, 2000.0f, 2000.0f), skyTexturePaths);
 
-	MyBot bot;
-	bot.initialize(tree_position, glm::vec3(1, 1, 1));
+	//MyBot bot;
+	//bot.initialize(tree_position, glm::vec3(1, 1, 1));
 
 
-	Tea tea;
-	tea.initialize(tree_position, glm::vec3(1, 1, 1));
+	//Tea tea;
+	//tea.initialize(tree_position, glm::vec3(1, 1, 1));
 
-	Spire spire;
-	spire.initialize(tree_position, glm::vec3(1, 1, 1));
+	//Spire spire;
+	//spire.initialize(tree_position, glm::vec3(1, 1, 1));
+	//spire.setScale(glm::vec3(0.2,0.2,0.2));
 
-	Obelisc obelisc;
-	obelisc.initialize(tree_position, glm::vec3(1, 1, 1));
+	//Obelisc obelisc;
+	//obelisc.initialize(tree_position, glm::vec3(1, 1, 1));
 
 
 
@@ -145,7 +146,7 @@ int main(void)
 	glm::mat4 viewMatrix, projectionMatrix, viewMatrixSky;
     glm::float32 FoV = 45;
 	glm::float32 zNear = 0.1f;
-	glm::float32 zFar = 2000.0f;
+	glm::float32 zFar = 5000.0f;
 	projectionMatrix = glm::perspective(glm::radians(FoV), 4.0f / 3.0f, zNear, zFar);
 
 	static double lastTime = glfwGetTime();
@@ -156,7 +157,7 @@ int main(void)
 	bool hasInteracted = false;
 	float cameraWobblePhase = 0.0f;
 	const float WOBBLE_SPEED = 2.0f;
-	const float WOBBLE_AMOUNT = 0.00005f;
+	const float WOBBLE_AMOUNT = 0.0005f;
 
 	do
 	{
@@ -189,8 +190,9 @@ int main(void)
 		//b.render(vp, viewMatrix, projectionMatrix, eye_center);
 		//ground.render(vp);
 		// Render the building
-		city.update(eye_center);
+		city.update(eye_center, currentTime);
 		city.render(vp, viewMatrix, projectionMatrix, eye_center);
+		//spire.render(vp,eye_center);
 
 		//obelisc.render(vp, eye_center);
 
@@ -198,18 +200,7 @@ int main(void)
 
 		//tree.render(vp, eye_center);
 
-		//get the bots of the city
-		//std::vector<std::shared_ptr<Entity>> bots;
-		//for (const auto& bot : city.getBots()) {
-		//	bots.push_back(std::static_pointer_cast<Entity>(bot));
-		//}
 
-		//update each bot
-		//for (auto& bot : bots) {
-		//	if (auto myBot = std::dynamic_pointer_cast<MyBot>(bot)) {
-		//		myBot->update(currentTime);
-		//	}
-		//}
 
 
 		if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS && !hasInteracted) {
@@ -236,6 +227,9 @@ int main(void)
 
 			std::stringstream stream;
 			stream << std::fixed << std::setprecision(2) << "Lab 4 | Frames per second (FPS): " << fps;
+
+			glfwSetWindowTitle(window, stream.str().c_str());
+
 		}
 		// Swap buffers
 		glfwSwapBuffers(window);
@@ -293,11 +287,12 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 	lookat = eye_center + glm::normalize(front);
 }
 
+
+
+
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
-    const float cameraSpeed = 20.0f;
-    const float minHeight = 0.0f;
-    const float maxHeight = 300.0f;
+
 
     // Camera movement with WASD
     glm::vec3 front = glm::normalize(glm::vec3(lookat.x - eye_center.x, 0.0f, lookat.z - eye_center.z));
@@ -320,19 +315,21 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         lookat += cameraSpeed * right;
     }
 
-    // Height control with Left Control + Up/Down
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-        if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
-            eye_center.y += cameraSpeed;
-            eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
-            lookat.y = eye_center.y;
-        }
-        if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
-            eye_center.y -= cameraSpeed;
-            eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
-            lookat.y = eye_center.y;
-        }
-    }
+	if (isCameraMoving)
+	{
+		if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+			if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
+				eye_center.y += cameraSpeed;
+				eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
+				lookat.y = eye_center.y;
+			}
+			if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
+				eye_center.y -= cameraSpeed;
+				eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
+				lookat.y = eye_center.y;
+			}
+		}
+	}
 
     // Escape to close window
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)

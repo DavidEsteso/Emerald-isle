@@ -22,8 +22,7 @@
 #include <unordered_map>
 
 struct Spire : public Entity {
-    glm::vec3 position;
-    glm::vec3 scale;
+
 
     std::vector<float> vertex_buffer_data;
     std::vector<float> normal_buffer_data;
@@ -36,7 +35,6 @@ struct Spire : public Entity {
     GLuint uvBufferID;
     GLuint indexBufferID;
 
-    GLuint programID;
     GLuint mvpMatrixID;
     GLuint modelMatrixID;
     GLuint viewPosID;
@@ -53,8 +51,13 @@ struct Spire : public Entity {
 
 
     void initialize(glm::vec3 pos, glm::vec3 scl) {
+
         position = pos;
         scale = scl;
+        scale.z = 10.0f;
+        rotation.z = 90.0f;
+
+
 
         const char* modelPath = "../lab2/models/spire/13208_GlowCone_v1.obj";
 
@@ -138,14 +141,15 @@ struct Spire : public Entity {
             std::cerr << "Failed to load shaders." << std::endl;
             return;
         }
+        initLightUniforms();
+
 
         // Get uniform locations
         mvpMatrixID = glGetUniformLocation(programID, "MVP");
         modelMatrixID = glGetUniformLocation(programID, "model");
         viewPosID = glGetUniformLocation(programID, "viewPos");
 
-        scale.z = 10.0f;
-        rotation.z = 90.0f;
+
 
         std::string texturePath = "../lab2/models/spire/textures/";
 
@@ -156,6 +160,8 @@ struct Spire : public Entity {
         diffuseMapLoc = glGetUniformLocation(programID, "diffuseMap");
         normalMapLoc = glGetUniformLocation(programID, "normalMap");
         roughnessMapLoc = glGetUniformLocation(programID, "roughnessMap");
+
+        
 
     }
 
@@ -180,10 +186,10 @@ struct Spire : public Entity {
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
 
-        // Calculate matrices
         glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), position);
         modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.x), glm::vec3(-1.0f, 0.0f, 0.0f));
         modelMatrix = glm::scale(modelMatrix, scale);
+
         glm::mat4 mvp = viewProjectionMatrix * modelMatrix;
 
         // Set uniforms
@@ -204,6 +210,8 @@ struct Spire : public Entity {
         glUniform1i(roughnessMapLoc, 2);
 
         setRotation(glm::vec3(90.0f, 90.0f, rotation.z));
+
+
 
         // Draw model
         glDrawElements(GL_TRIANGLES, index_buffer_data.size(), GL_UNSIGNED_INT, 0);

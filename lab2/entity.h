@@ -27,6 +27,15 @@ public:
     glm::vec3 rotation;
     glm::mat4 modelMatrix;
 
+    GLuint programID;
+
+
+    // Nuevos uniforms para iluminación
+    GLint uLightPos;
+    GLint uLightColor;
+    GLint uViewPos;
+    GLint uLightIntensity;
+
     virtual void cleanup() = 0;
 
     virtual ~Entity() = default;
@@ -59,6 +68,23 @@ public:
         modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
 
         modelMatrix = glm::scale(modelMatrix, scale);
+    }
+
+    virtual void setLightUniforms(const glm::vec3& lightPos, const glm::vec3& lightColor,
+                             const glm::vec3& viewPos, float intensity) {
+        glUseProgram(programID);
+        glUniform3fv(uLightPos, 1, glm::value_ptr(lightPos));
+        glUniform3fv(uLightColor, 1, glm::value_ptr(lightColor));
+        glUniform3fv(uViewPos, 1, glm::value_ptr(viewPos));
+        glUniform1f(uLightIntensity, intensity);
+
+    }
+
+    virtual void initLightUniforms() {
+        uLightPos = glGetUniformLocation(programID, "lightPos");
+        uLightColor = glGetUniformLocation(programID, "lightColor");
+        uViewPos = glGetUniformLocation(programID, "viewPos");
+        uLightIntensity = glGetUniformLocation(programID, "lightIntensity");
     }
 
     const glm::vec3& getPosition() const { return position; }

@@ -6,10 +6,12 @@ layout(location = 2) in vec2 vertexUV;
 out vec2 UV;
 out vec3 Normal;
 out vec3 Position;
+out vec3 FragPos;
 
 uniform mat4 MVP;
 uniform mat4 model;
 uniform bool enableContour;
+uniform vec3 viewPos;
 
 void main() {
     vec3 adjustedPosition = vertexPosition;
@@ -21,4 +23,5 @@ void main() {
     UV = vertexUV;
     Normal = mat3(model) * vertexNormal;
     Position = vec3(model * vec4(vertexPosition, 1.0));
+    FragPos = Position;
 }

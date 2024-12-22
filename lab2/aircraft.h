@@ -122,10 +122,14 @@ GLuint LoadTextureAir(const std::string& path) {
 
 }
 
+float cameraSpeed = 5.0f;
+float minHeight = 2.0f;
+float maxHeight = 10.0f;
+
+bool isCameraMoving = false;
 
 struct Aircraft : public Entity {
-    glm::vec3 position;
-    glm::vec3 scale;
+
 
     std::vector<float> vertex_buffer_data;
     std::vector<float> normal_buffer_data;
@@ -139,7 +143,6 @@ struct Aircraft : public Entity {
     GLuint uvBufferID;
     GLuint indexBufferID;
 
-    GLuint programID;
     GLuint mvpMatrixID;
     GLuint modelMatrixID;
     GLuint viewPosID;
@@ -164,6 +167,8 @@ struct Aircraft : public Entity {
     bool isInteractable = false;
     std::string interactionMessage = "Press ENTER to interact with aircraft";
 
+    bool hasInteracted = false;
+
     void setInteractable(bool interactable) {
         isInteractable = interactable;
         std::cout << "Aircraft interaction found!" << std::endl;
@@ -172,12 +177,18 @@ struct Aircraft : public Entity {
 
     void onInteract() {
         cleanup();
+        hasInteracted = true;
+        cameraSpeed = 30.0f;
+        maxHeight = 1000.0f;
+        isCameraMoving = true;
     }
 
     void initialize(glm::vec3 pos, glm::vec3 scl) {
-        basePosition = pos;
+
         position = pos;
         scale = scl;
+        //ranodm rotation y axis
+        rotation.y = rand() % 360;
         const char* modelPath = "../lab2/models/air/E45Aircraft_obj.obj";
         const char* materialBaseDir = "../lab2/models/air";
 
@@ -277,6 +288,8 @@ struct Aircraft : public Entity {
             return;
         }
 
+        initLightUniforms();
+
         mvpMatrixID = glGetUniformLocation(programID, "MVP");
         modelMatrixID = glGetUniformLocation(programID, "model");
         viewPosID = glGetUniformLocation(programID, "viewPos");
@@ -293,8 +306,8 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
         // Calculate total elapsed time
         float totalElapsedTime = std::chrono::duration<float>(currentRenderTime - startTime).count();
 
-        float floatSpeed = 2.0f;       // Speed of floating animation
-        float floatAmplitude = 1.5f;  // Maximum vertical offset
+        float floatSpeed = 1.0f;       // Speed of floating animation
+        float floatAmplitude = 2.5f;  // Maximum vertical offset
         float animationDuration = 2.0f; // Full animation cycle duration
 
         static float lastVerticalOffset = 0.0f; // Tracks last vertical offset
@@ -336,7 +349,7 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
 
 
     // Update position in-place
-    position = basePosition + glm::vec3(0.0f, verticalOffset, 0.0f);
+    position = position + glm::vec3(0.0f, verticalOffset, 0.0f);
 
     // Rest of the existing render method remains the same
     glUseProgram(programID);
@@ -356,6 +369,10 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
 
     glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), position);
+    modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.x), glm::vec3(-1.0f, 0.0f, 0.0f));
+    modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+    modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
     modelMatrix = glm::scale(modelMatrix, scale);
     glm::mat4 mvp = viewProjectionMatrix * modelMatrix;
 
@@ -417,7 +434,7 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
     glUniform3fv(viewPosLocation, 1, &cameraPos[0]);
 
     // Establecer si se habilita el contorno
-    glUniform1i(contourUniformLocation, isInteractable ? 1 : 1);
+    glUniform1i(contourUniformLocation, isInteractable ? 0 : 0);
 
     size_t count = material_indices.size() - startIndex;
     glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)(startIndex * sizeof(unsigned int)));
@@ -446,9 +463,9 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
 
             heightOffset = std::clamp(heightOffset, moveRange.minHeight, moveRange.maxHeight);
 
-            float y = basePosition.y + heightOffset;
+            float y = position.y + heightOffset;
 
-            keyframes.push_back({t, glm::vec3(basePosition.x, y, basePosition.z)});
+            keyframes.push_back({t, glm::vec3(position.x, y, position.z)});
         }
     }
 

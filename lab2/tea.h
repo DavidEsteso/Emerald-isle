@@ -18,8 +18,7 @@
 #include <unordered_map>
 
 struct Tea : public Entity {
-    glm::vec3 position;
-    glm::vec3 scale;
+
 
     std::vector<float> vertex_buffer_data;
     std::vector<float> normal_buffer_data;
@@ -32,7 +31,6 @@ struct Tea : public Entity {
     GLuint uvBufferID;
     GLuint indexBufferID;
 
-    GLuint programID;
     GLuint mvpMatrixID;
     GLuint modelMatrixID;
     GLuint viewPosID;
@@ -123,6 +121,8 @@ struct Tea : public Entity {
             std::cerr << "Failed to load shaders." << std::endl;
             return;
         }
+        initLightUniforms();
+
 
         // Get uniform locations
         mvpMatrixID = glGetUniformLocation(programID, "MVP");
@@ -132,8 +132,6 @@ struct Tea : public Entity {
         // make the model longer in y axis
         rotation.z = 90.0f;
 
-    //bigger scale
-        scale = glm::vec3(10.0f, 10.0f, 10.0f);
 
     }
 
@@ -161,8 +159,8 @@ struct Tea : public Entity {
         glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), position);
         modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.x), glm::vec3(-1.0f, 0.0f, 0.0f));
         modelMatrix = glm::scale(modelMatrix, scale);
-        glm::mat4 mvp = viewProjectionMatrix * modelMatrix;
 
+        glm::mat4 mvp = viewProjectionMatrix * modelMatrix;
         // Set uniforms
         glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
         glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
