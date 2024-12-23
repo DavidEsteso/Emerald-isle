@@ -105,9 +105,6 @@ struct Ground : public Entity {
 	GLuint mvpMatrixID;
 	GLuint textureSamplerID;
 
-	GLuint lightPositionID;
-	GLuint lightIntensityID;
-	GLuint lightColorID;
 
 	GLuint diffuseTextureID;
 	GLuint specularTextureID;
@@ -170,9 +167,7 @@ struct Ground : public Entity {
 
 		// Get a handle for our "MVP" uniform
 		mvpMatrixID = glGetUniformLocation(programID, "MVP");
-		lightPositionID = glGetUniformLocation(programID, "lightPosition");
-		lightIntensityID = glGetUniformLocation(programID, "lightIntensity");
-		lightColorID = glGetUniformLocation(programID, "lightColor");
+
 
 		modelMatrixID = glGetUniformLocation(programID, "model");
 
@@ -182,7 +177,6 @@ struct Ground : public Entity {
 
 
 		if (isPanel) {
-			// Cargar texturas de panel solar
 			std::string diffusePath = std::string(texturePath) + "/SolarPanel002_1K-JPG_Color.jpg";
 			std::string specularPath = std::string(texturePath) + "/SolarPanel002_1K-JPG_Roughness.jpg";
 			std::string reflectionPath = std::string(texturePath) + "/SolarPanel002_1K-JPG_Metalness.jpg";
@@ -192,10 +186,9 @@ struct Ground : public Entity {
 			reflectionTextureID = LoadTextureTileBox(reflectionPath.c_str());
 
 		} else {
-			// Cargar texturas de musgo
-			std::string diffusePath = std::string(texturePath) + "/mossy_cobblestone_diff_1k.jpg";
-			std::string specularPath = std::string(texturePath) + "/mossy_cobblestone_rough_1k.png";
-			std::string reflectionPath = std::string(texturePath) + "/mossy_cobblestone_arm_1k.png";
+			std::string diffusePath = std::string(texturePath) + "/floor_bricks_02_diff_1k.jpg";
+			std::string specularPath = std::string(texturePath) + "/floor_bricks_02_rough_1k.png";
+			std::string reflectionPath = std::string(texturePath) + "/floor_bricks_02_arm_1k.png";
 
 			diffuseTextureID = LoadTextureTileBox(diffusePath.c_str());
 			specularTextureID = LoadTextureTileBox(specularPath.c_str());
@@ -265,9 +258,6 @@ struct Ground : public Entity {
 		glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
 
 
-		glUniform3fv(lightPositionID, 1, &LightPosition[0]);
-		glUniform3fv(lightIntensityID, 1, &lightIntensity[0]);
-		glUniform3fv(lightColorID, 1, &LightColor[0]);
 
 		//pass lightSpaceMatrix to shader
 		GLuint lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");

@@ -10,5 +10,5 @@ flat out int faceIndex;
 void main() {
     gl_Position = MVP * vec4(aPos, 1.0);
     TexCoord = aTexCoord;
-    faceIndex = gl_VertexID / 4; // Determine which face we're on
+    faceIndex = gl_VertexID / 4;
 }

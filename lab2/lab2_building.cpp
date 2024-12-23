@@ -120,7 +120,7 @@ int main(void)
 	//aircraft.initialize(aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
 
 	Sky sky;
-	//sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(2000.0f, 2000.0f, 2000.0f), skyTexturePaths);
+	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(2000.0f, 2000.0f, 2000.0f), skyTexturePaths);
 
 	//MyBot bot;
 	//bot.initialize(tree_position, glm::vec3(1, 1, 1));
@@ -135,6 +135,8 @@ int main(void)
 
 	//Obelisc obelisc;
 	//obelisc.initialize(tree_position, glm::vec3(1, 1, 1));
+
+
 
 
 
@@ -180,7 +182,7 @@ int main(void)
 
 		viewMatrixSky = glm::mat4(glm::mat3(viewMatrix)); // Remove translation
 		glm::mat4 vpSky = projectionMatrix * viewMatrixSky;
-		//sky.render(vpSky);
+		sky.render(vpSky);
 
 		currentTime = glfwGetTime();
 

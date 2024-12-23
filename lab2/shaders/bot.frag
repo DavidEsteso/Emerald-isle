@@ -1,40 +1,37 @@
-in vec3 worldPosition;
+#version 330 core
+
+
 in vec3 worldNormal;
-in vec3 viewPosition;
-flat in int isShoulderOut;
+in vec3 viewDirection;
+in vec3 worldPosition;
 
 uniform samplerCube cubemapSampler;
-uniform float refractionIndex = 1.52;
-
 uniform vec3 lightPos;
 uniform vec3 lightColor;
 uniform float lightIntensity;
+uniform vec3 viewPos;
 
-out vec4 color;
+out vec4 fragColor;
 
 void main() {
-    vec3 normal = normalize(worldNormal);
-    vec3 viewDir = normalize(viewPosition);
-    vec3 lightDir = normalize(lightPos - worldPosition);
+    vec3 N = normalize(worldNormal);
+    vec3 V = normalize(viewPos - worldPosition);
 
-    float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = lightColor * diff * lightIntensity;
+    vec3 L = normalize(lightPos - worldPosition);
 
+    vec3 H = normalize(V + L);
 
-    vec3 reflectDir = reflect(-viewDir, normal);
-    vec3 refractDir = refract(-viewDir, normal, 1.0/refractionIndex);
+    float NdotL = max(dot(N, L), 0.0);
+    float NdotH = max(dot(N, H), 0.0);
 
-    vec4 reflectColor = texture(cubemapSampler, reflectDir);
-    vec4 refractColor = texture(cubemapSampler, refractDir);
+    vec3 diffuse = lightColor * lightIntensity * NdotL;
+    vec3 specular = lightColor * lightIntensity * pow(NdotH, 16.0);
 
-    float fresnelBias = 0.0;
-    float fresnelScale = 1.0;
-    float fresnelPower = 2.0;
-    float fresnel = fresnelBias + fresnelScale * pow(1.0 + dot(viewDir, normal), fresnelPower);
+    vec3 reflectedDir = reflect(-V, N);
+    vec3 envColor = texture(cubemapSampler, reflectedDir).rgb;
 
-    vec4 refractionReflection = mix(refractColor, reflectColor, fresnel);
+    vec3 lighting = diffuse + specular;
+    vec3 finalColor = mix(envColor, lighting, 0.5);
 
-    vec3 ambient = 0.3 * refractionReflection.rgb;
-
-    color = vec4(refractionReflection.rgb * (diffuse + ambient), refractionReflection.a);
+    fragColor = vec4(finalColor, 1.0);
 }

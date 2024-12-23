@@ -36,6 +36,7 @@
 #include <spire.h>
 #include <obelisk.h>
 #include <tea.h>
+#include <sphere.h>
 
 
 // OpenGL camera view parameters
@@ -98,7 +99,67 @@ struct LightPoint {
 	float intensity;
 };
 
+bool isRoadFunc(const ChunkCoord& coord) {
+    const int PATTERN_SIZE = 3;
 
+    bool isMainRoad = (coord.x % PATTERN_SIZE == 0) || (coord.z % PATTERN_SIZE == 0);
+    if (isMainRoad) return true;
+
+    // Determine which block we're in
+    int blockX = coord.x / PATTERN_SIZE;
+    int blockZ = coord.z / PATTERN_SIZE;
+
+    uint32_t seed = blockX * 74531 + blockZ * 19477;
+    float random = float(seed % 100) / 100.0f;
+
+    // Determine block type based on random value
+    enum BlockType {
+        BLOCK_1x1 = 0,
+        BLOCK_1x2 = 1,
+        BLOCK_2x1 = 2,
+        BLOCK_2x2 = 3
+    };
+
+    BlockType blockType;
+    if (random < 0.25f) blockType = BLOCK_1x1;
+    else if (random < 0.5f) blockType = BLOCK_1x2;
+    else if (random < 0.75f) blockType = BLOCK_2x1;
+    else blockType = BLOCK_2x2;
+
+    int localX = coord.x % PATTERN_SIZE;
+    int localZ = coord.z % PATTERN_SIZE;
+
+    // Calculate if this should be a road based on block type
+    switch (blockType) {
+        case BLOCK_1x1:
+            return (localX == 0) || (localZ == 0) ||
+                   (localX == 2) || (localZ == 2);
+
+        case BLOCK_1x2:
+            if (random < 0.375f) {
+                return (localX == 0) || (localZ == 0) ||
+                       (localX == 2) || (localZ == 2);
+            } else {
+                return (localX == 0) || (localX == 2) ||
+                       (localZ == 0);
+            }
+
+        case BLOCK_2x1:
+            if (random < 0.625f) {
+                return (localX == 0) || (localZ == 0) ||
+                       (localZ == 2);
+            } else {
+                return (localX == 0) || (localZ == 0) ||
+                       (localZ == 2);
+            }
+
+        case BLOCK_2x2:
+            return (localX == 0) || (localZ == 0);
+
+        default:
+            return true;
+    }
+}
 
 struct InfiniteCity {
 
@@ -116,6 +177,9 @@ struct InfiniteCity {
 
 	std::shared_ptr<Tree> treeTemplate;
 
+	//sphere template
+	std::shared_ptr<Sphere> sphereTemplate;
+
 
 	std::unordered_map<ChunkCoord, std::vector<std::shared_ptr<Entity>>, ChunkCoordHash> currentChunks;
 
@@ -129,6 +193,8 @@ struct InfiniteCity {
 	std::vector<std::shared_ptr<Entity>> currentEntities;
 
 
+
+
 	GLuint shadowMapFBO;
 	GLuint shadowMapTexture;
 	GLuint shadowProgramID;
@@ -139,7 +205,7 @@ struct InfiniteCity {
 
 	bool saveDepth = false;
 
-	static const int LIGHT_GROUP_SIZE = 1; // Cada luz cubre 3x3 chunks
+	static const int LIGHT_GROUP_SIZE = 1;
 	static constexpr float LIGHT_HEIGHT = 400.0f;
 	std::unordered_map<ChunkCoord, LightPoint, ChunkCoordHash> lightPoints;
 
@@ -148,8 +214,6 @@ struct InfiniteCity {
 	bool aircraftFound = false;
 	std::shared_ptr<Aircraft> currentInteractableAircraft = nullptr;
 
-
-	// Map of chunks to entities
 
 	std::unordered_map<ChunkCoord, std::vector<std::shared_ptr<Entity>>, ChunkCoordHash> chunks;
 
@@ -177,7 +241,7 @@ struct InfiniteCity {
 		roadGroundTemplate->initialize(
 			glm::vec3(0, 0, 0),
 			glm::vec3(CHUNK_SIZE/2, 1, CHUNK_SIZE/2),
-			"../lab2/textures/ground" );
+			"../lab2/textures/bricks" );
 
 		aircraftTemplate = std::make_shared<Aircraft>();
 		aircraftTemplate->initialize(
@@ -188,7 +252,7 @@ struct InfiniteCity {
 		botTemplate = std::make_shared<MyBot>();
 		botTemplate->initialize(
 			glm::vec3(0, 0, 0),
-			glm::vec3(2,2,2),
+			glm::vec3(1,1,1),
 			glm::vec3 (0,0,0)
 		);
 
@@ -216,6 +280,13 @@ struct InfiniteCity {
 			glm::vec3(20, 20, 20)
 		);
 
+		sphereTemplate = std::make_shared<Sphere>();
+		sphereTemplate->initialize(
+			glm::vec3(0, 0, 0),
+			glm::vec3(2, 2, 2)
+		);
+
+
 	}
 
 	ChunkCoord getCurrentChunk(const glm::vec3& cameraPos) {
@@ -236,127 +307,136 @@ struct InfiniteCity {
 void generateChunk(const ChunkCoord& coord) {
 
     std::vector<std::shared_ptr<Entity>> chunkEntities;
-	generateLightForGroup(coord);
 	std::seed_seq seed{coord.x, coord.z};
 	std::mt19937 rng(seed);
 
 
-    auto centerMarker = std::make_shared<Building>(*buildingTemplates[0]);
-    centerMarker->setScale(glm::vec3(4, 4, 4));
-    centerMarker->setPosition(glm::vec3(
-        coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-        2,
-        coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-    ));
-    chunkEntities.push_back(centerMarker);
+	if (coord.x == 0 && coord.z == 0) {
 
-    if (coord.x == 0 && coord.z == 0) {
-        //initilize a centrar aircraft
-		auto aircraftCentral = std::make_shared<Aircraft>(*aircraftTemplate);
-    	aircraftCentral->initialize(
-			glm::vec3(
-				coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-				100,
-				coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-			),
-			glm::vec3(30, 30, 30)
-		);
-
-    	chunkEntities.push_back(aircraftCentral);
-
-
-
-
-        auto ground = std::make_shared<Ground>(*groundTemplate);
-        ground->initialize(
-            glm::vec3(coord.x * CHUNK_SIZE, 0, coord.z * CHUNK_SIZE),
-            glm::vec3(CHUNK_SIZE, 1, CHUNK_SIZE),
-            "../lab2/textures/ground"
-        );
-    	ground->setPosition(glm::vec3(
+	    generateLightForGroup(coord, chunkEntities);
+		auto road = std::make_shared<Ground>(*roadGroundTemplate);
+		road->setPosition(glm::vec3(
 			coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
 			0,
 			coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
 		));
-    	ground->setScale(glm::vec3(CHUNK_SIZE, 1, CHUNK_SIZE));
+		chunkEntities.push_back(road);
+	} else if (std::abs(coord.x) <= 1 && std::abs(coord.z) <= 1) {
 
-        chunkEntities.push_back(ground);
+	    generateLightForGroup(coord, chunkEntities);
 
-    	//render a tree
-    	auto tree = std::make_shared<Tree>(*treeTemplate);
-    	tree->setPosition(glm::vec3(
-    	coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
+
+		auto road = std::make_shared<Ground>(*roadGroundTemplate);
+		road->setPosition(glm::vec3(
+			coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
 			0,
 			coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
+		));
+		chunkEntities.push_back(road);
+
+		const float OFFSET = CHUNK_SIZE * 0.3f;
+		if (coord.x == -1 && coord.z == -1) {
+
+			auto spire = std::make_shared<Spire>(*spireTemplate);
+			spire->setPosition(glm::vec3(
+				coord.x * CHUNK_SIZE ,
+				-30,
+				coord.z * CHUNK_SIZE
 			));
-    	chunkEntities.push_back(tree);
-
-
-    	//render a bot
-        auto bot = std::make_shared<MyBot>(*botTemplate);
-    	bot->setPosition(glm::vec3(
-    	coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-		0,
-		coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-		));
-    	chunkEntities.push_back(bot);
-
-    	// render the obelisk, spire and tea
-    	auto obelisk = std::make_shared<Obelisk>(*obeliskTemplate);
-    	obelisk->setPosition(glm::vec3(
-			coord.x * CHUNK_SIZE + CHUNK_SIZE * 0.25f,
-			0,
-			coord.z * CHUNK_SIZE + CHUNK_SIZE * 0.5f
-		));
-    	chunkEntities.push_back(obelisk);
-
-    	auto spire = std::make_shared<Spire>(*spireTemplate);
-    	spire->setPosition(glm::vec3(
-			0,
-			-5,
-			coord.z * CHUNK_SIZE + CHUNK_SIZE * 0.75f
-		));
-    	chunkEntities.push_back(spire);
-
-    	auto tea = std::make_shared<Tea>(*teaTemplate);
-    	tea->setPosition(glm::vec3(
-			coord.x * CHUNK_SIZE + CHUNK_SIZE * 0.25f,
-			0,
-			coord.z * CHUNK_SIZE + CHUNK_SIZE * 0.25f
-		));
-    	chunkEntities.push_back(tea);
-    }
-
-    else if (std::abs(coord.x) <= 2 && std::abs(coord.z) <= 2) {
-        return;
-    }
-    else {
-        bool isRoad = ((coord.x) % 3 == 0) || ((coord.z) % 3 == 0);
-
-        if (isRoad) {
-            auto road = std::make_shared<Ground>(*roadGroundTemplate);
-            road->setPosition(glm::vec3(
-                coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-                0,
-                coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-            ));
-            chunkEntities.push_back(road);
-
-        float height = 300.0f + (rng() % 300);
-
-        if (rng() % 100 < AIRCRAFT_SPAWN_PROBABILITY * 100) {
-        	auto aircraft = std::make_shared<Aircraft>(*aircraftTemplate);
-        	glm::vec3 aircraftPos = glm::vec3(
-				coord.x * CHUNK_SIZE + (rand() % CHUNK_SIZE),
-				height,
-				coord.z * CHUNK_SIZE + (rand() % CHUNK_SIZE)
+			chunkEntities.push_back(spire);
+		} else if (coord.x == -1 && coord.z == 1) {
+			auto tea = std::make_shared<Tea>(*teaTemplate);
+			tea->setPosition(glm::vec3(
+				coord.x * CHUNK_SIZE + OFFSET,
+				0,
+				coord.z * CHUNK_SIZE + CHUNK_SIZE - OFFSET
+			));
+			chunkEntities.push_back(tea);
+		} else if (coord.x == 1 && coord.z == -1) {
+			auto obelisk = std::make_shared<Obelisk>(*obeliskTemplate);
+			obelisk->setPosition(glm::vec3(
+				coord.x * CHUNK_SIZE + CHUNK_SIZE - OFFSET,
+				0,
+				coord.z * CHUNK_SIZE + OFFSET
+			));
+			chunkEntities.push_back(obelisk);
+		} else if (coord.x == 1 && coord.z == 1) {
+			auto aircraftCentral = std::make_shared<Aircraft>(*aircraftTemplate);
+			aircraftCentral->initialize(
+				glm::vec3(
+					coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
+					100,
+					coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
+				),
+				glm::vec3(30, 30, 30)
 			);
-        	aircraft->setPosition(aircraftPos);
-        	//set a random orientation
-        	aircraft->setRotation(glm::vec3(0, rand() % 360, 0));
-        	chunkEntities.push_back(aircraft);
-        }
+			chunkEntities.push_back(aircraftCentral);
+		}
+	}
+	else {
+		bool isRoad = isRoadFunc(coord);
+	if (isRoad) {
+		generateLightForGroup(coord, chunkEntities);
 
+
+
+		auto road = std::make_shared<Ground>(*roadGroundTemplate);
+	    road->setPosition(glm::vec3(
+	        coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
+	        0,
+	        coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
+	    ));
+	    chunkEntities.push_back(road);
+
+	    float height = 300.0f + (rng() % 300);
+
+	    if (rng() % 100 < AIRCRAFT_SPAWN_PROBABILITY * 100) {
+	        auto aircraft = std::make_shared<Aircraft>(*aircraftTemplate);
+	        glm::vec3 aircraftPos = glm::vec3(
+	            coord.x * CHUNK_SIZE + (rand() % CHUNK_SIZE),
+	            height,
+	            coord.z * CHUNK_SIZE + (rand() % CHUNK_SIZE)
+	        );
+	        aircraft->setPosition(aircraftPos);
+	        aircraft->setRotation(glm::vec3(0, rand() % 360, 0));
+	        chunkEntities.push_back(aircraft);
+	    }
+
+	    glm::vec3 centerPosition = glm::vec3(
+	        coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
+	        0,
+	        coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
+	    );
+
+		glm::vec3 edgePositions[4];
+
+		const float inset = 2.0f;
+		const float sideOffset = 5.0f;
+
+		edgePositions[0] = glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5), 0, coord.z * CHUNK_SIZE + inset);
+		edgePositions[1] = glm::vec3((coord.x + 1) * CHUNK_SIZE - inset, 0, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5));
+		edgePositions[2] = glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5), 0, (coord.z + 1) * CHUNK_SIZE - inset);
+		edgePositions[3] = glm::vec3(coord.x * CHUNK_SIZE + inset, 0, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5));
+
+
+	    // Determine if a bot will spawn at the center (40%)
+	    if (rng() % 10 < 4) {
+	        auto bot = std::make_shared<MyBot>(*botTemplate);
+	        bot->setPosition(glm::vec3(centerPosition.x, -33, centerPosition.z));
+	        bot->setRotation(glm::vec3(0, rand() % 360, 0));
+	        chunkEntities.push_back(bot);
+	    }
+
+	    // Randomly select an edge position for a tree (20%)
+	    if (rng() % 10 < 2) {
+	        int edgeIndex = rng() % 4;
+	        auto tree = std::make_shared<Tree>(*treeTemplate);
+
+	        float randomHeight = 20.0f + (rng() % 5);
+	        tree->setScale(glm::vec3(20.0f, randomHeight, 20.0f));
+	        tree->setPosition(edgePositions[edgeIndex]);
+	        chunkEntities.push_back(tree);
+	    }
 
         } else {
             auto ground = std::make_shared<Ground>(*groundTemplate);
@@ -372,7 +452,7 @@ void generateChunk(const ChunkCoord& coord) {
 
 
 			const int numCrystals = 5 + (rng() % 10);
-			const float centerArea = CHUNK_SIZE * 0.3f;
+			const float centerArea = CHUNK_SIZE * 0.2f;
 			const float baseWidth = 16.0f;
 
 			std::vector<glm::vec2> crystalPositions;
@@ -386,24 +466,22 @@ void generateChunk(const ChunkCoord& coord) {
 
 			float firstHeight = 64.0f + (rng() % 128);
 			float firstScaleX = 0.5f + (float)(rng() % 100) / 100.0f;
-			float firstScaleZ = 0.5f + (float)(rng() % 100) / 100.0f; // Escala en Z entre 0.5 y 1.5
+			float firstScaleZ = 0.5f + (float)(rng() % 100) / 100.0f;
 
 			auto firstCrystal = std::make_shared<Building>(*buildingTemplates[0]);
 			firstCrystal->setScale(glm::vec3(baseWidth * firstScaleX, firstHeight, baseWidth * firstScaleZ));
 			firstCrystal->setPosition(glm::vec3(centerPos.x, firstHeight , centerPos.y));
-			firstCrystal->setRotation(glm::vec3(0, 0, 0)); // Rotación aleatoria en Y
+			firstCrystal->setRotation(glm::vec3(0, 0, 0));
 			chunkEntities.push_back(firstCrystal);
 
-			// Generar el resto de los cristales alrededor del primero
 			for (int i = 1; i < numCrystals; i++) {
-			    float randomHeight = 64.0f + (rng() % 128); // Altura aleatoria entre 64 y 192
-			    float randomScaleX = 0.5f + (float)(rng() % 100) / 100.0f; // Escala en X entre 0.5 y 1.5
-			    float randomScaleZ = 0.5f + (float)(rng() % 100) / 100.0f; // Escala en Z entre 0.5 y 1.5
+			    float randomHeight = 64.0f + (rng() % 128);
+			    float randomScaleX = 0.5f + (float)(rng() % 100) / 100.0f;
+			    float randomScaleZ = 0.5f + (float)(rng() % 100) / 100.0f;
 			    auto crystal = std::make_shared<Building>(*buildingTemplates[0]);
 
-			    // Generar una posición ligeramente alejada del centro
-			    float angle = (float)(rng() % 360) * 3.14159f / 180.0f; // Ángulo aleatorio
-			    float distance = (float)(rng() % (int)(centerArea)); // Distancia aleatoria dentro del área central
+			    float angle = (float)(rng() % 360) * 3.14159f / 180.0f;
+			    float distance = (float)(rng() % (int)(centerArea));
 
 			    float offsetX = cos(angle) * distance;
 			    float offsetZ = sin(angle) * distance;
@@ -413,84 +491,17 @@ void generateChunk(const ChunkCoord& coord) {
 			        centerPos.y + offsetZ
 			    );
 
-			    // Añadir rotación aleatoria
 			    glm::vec3 randomRotation(
-			        0, // No rotación en X
-			        rng() % 30, // Rotación aleatoria en Y
-			        rng() % 5 // Ligeras inclinaciones en Z para variación
+			        0,
+			        rng() % 30,
+			        rng() % 5
 			    );
 
-			    // Configurar el cristal
 			    crystal->setScale(glm::vec3(baseWidth * randomScaleX, randomHeight, baseWidth * randomScaleZ));
 			    crystal->setPosition(glm::vec3(pos.x, randomHeight, pos.y));
 			    crystal->setRotation(randomRotation);
 			    chunkEntities.push_back(crystal);
 			}
-        	glm::vec3 positions[4];
-
-
-			// Definir las cuatro posiciones posibles (bordes del chunk)
-			positions[0] = glm::vec3(coord.x * CHUNK_SIZE + (rng() % 10), 0, coord.z * CHUNK_SIZE);                    // Norte
-			positions[1] = glm::vec3((coord.x + 1) * CHUNK_SIZE, 0, coord.z * CHUNK_SIZE + (rng() % 10));             // Este
-			positions[2] = glm::vec3(coord.x * CHUNK_SIZE + (rng() % 10), 0, (coord.z + 1) * CHUNK_SIZE - (rng() % 10)); // Sur
-			positions[3] = glm::vec3(coord.x * CHUNK_SIZE, 0, coord.z * CHUNK_SIZE + (rng() % 10));                   // Oeste
-
-			// Elegir dos posiciones al azar
-			std::vector<int> selectedIndices = {0, 1, 2, 3};
-			std::shuffle(selectedIndices.begin(), selectedIndices.end(), rng);
-
-			int firstIndex = selectedIndices[0];
-			int secondIndex = selectedIndices[1];
-
-			// Decidir si en la primera posición habrá un bot (40%) o un tree (20%)
-			int firstChance = rng() % 10;
-			if (firstChance < 3) {
-			    // Bot en la primera posición
-			    auto bot = std::make_shared<MyBot>(*botTemplate);
-			    bot->setPosition(positions[firstIndex]);
-				bot->setRotation(glm::vec3(0, rand() % 360, 0));
-			    chunkEntities.push_back(bot);
-			} else if (firstChance < 4) {
-			    // Tree en la primera posición
-			    auto tree = std::make_shared<Tree>(*treeTemplate);
-
-
-			    tree->setPosition(positions[firstIndex]);
-			    chunkEntities.push_back(tree);
-			}
-
-			// Decidir si en la segunda posición habrá un bot (40%) o un tree (20%)
-			int secondChance = rng() % 10;
-			bool secondIsBot = (secondChance < 3);
-			bool secondIsTree = (secondChance >= 3 && secondChance < 4);
-
-			if (secondIsBot) {
-			    // Bot en la segunda posición
-			    auto bot = std::make_shared<MyBot>(*botTemplate);
-			    bot->setPosition(positions[secondIndex]);
-				bot->setRotation(glm::vec3(0, rand() % 360, 0));
-
-
-			    // Verificar si la posición está ocupada
-			    if (glm::distance(glm::vec2(positions[firstIndex].x, positions[firstIndex].z), glm::vec2(positions[secondIndex].x, positions[secondIndex].z)) >= 5.0f) {
-			        chunkEntities.push_back(bot);
-			    }
-			} else if (secondIsTree) {
-			    // Tree en la segunda posición
-			    auto tree = std::make_shared<Tree>(*treeTemplate);
-
-			    float randomHeight = 15.0f + (rng() % 5); // Altura entre 20 y 40
-			    tree->setScale(glm::vec3(15.0f, randomHeight, 15.0f));
-			    tree->setPosition(positions[secondIndex]);
-
-			    // Verificar si la posición está ocupada
-			    if (glm::distance(glm::vec2(positions[firstIndex].x, positions[firstIndex].z), glm::vec2(positions[secondIndex].x, positions[secondIndex].z)) >= 5.0f) {
-			        chunkEntities.push_back(tree);
-			    }
-			}
-
-
-
 
         }
     }
@@ -534,9 +545,7 @@ void generateChunk(const ChunkCoord& coord) {
 
 			LightPoint light = getClosestLight(coord);
 
-			auto centerMarker = std::make_shared<Building>(*buildingTemplates[0]);
-			centerMarker->setScale(glm::vec3(4, 4, 4));
-			centerMarker->setPosition(light.position);
+
 
 
 			for (auto& entity : chunk) {
@@ -564,8 +573,10 @@ void generateChunk(const ChunkCoord& coord) {
 				} else if (auto tree = std::dynamic_pointer_cast<Tree>(entity)) {
 					tree->setLightUniforms(light.position, light.color, eye, light.intensity);
 					tree->render(vp, eye);
+				} else if (auto sphere = std::dynamic_pointer_cast<Sphere>(entity)) {
+					sphere->setLightUniforms(light.position, light.color, eye, light.intensity);
+					sphere->render(vp, eye);
 				}
-				centerMarker->render(vp, viewMatrix, projectionMatrix, eye, 0, glm::mat4(1.0f));
 			}
 		}
 
@@ -573,7 +584,6 @@ void generateChunk(const ChunkCoord& coord) {
 
 		findInteractableAircraftInFrustum(eye, projectionMatrix, viewMatrix);
 
-		// Save depth texture if enabled
 		if (saveDepth) {
 			std::string filename = "depth_camera.png";
 			saveDepthTexture(shadowMapFBO, filename);
@@ -589,26 +599,28 @@ void generateChunk(const ChunkCoord& coord) {
 		};
 	}
 
-	void generateLightForGroup(const ChunkCoord& coord) {
-		// Obtener coordenada del grupo
+	void generateLightForGroup(const ChunkCoord& coord, std::vector<std::shared_ptr<Entity>>& chunkEntities) {
 		ChunkCoord groupCoord = getLightGroupCoord(coord);
 
-		// Si ya existe una luz para este grupo, no hacer nada
 		if (lightPoints.find(groupCoord) != lightPoints.end()) {
 			return;
 		}
 
-		// Crear nuevo punto de luz para el grupo
+
 		LightPoint light;
 		light.position = glm::vec3(
 			groupCoord.x * CHUNK_SIZE + (CHUNK_SIZE * LIGHT_GROUP_SIZE / 2),
 			LIGHT_HEIGHT - 200,
 			groupCoord.z * CHUNK_SIZE + (CHUNK_SIZE * LIGHT_GROUP_SIZE / 2)
 		);
-		light.color = glm::vec3(1.0f, 1.0f, 1.0f);
+		light.color = glm::vec3(1.0, 0.95, 0.95);
 		light.intensity = 1.0f;
 
 		lightPoints[groupCoord] = light;
+
+		auto sphere = std::make_shared<Sphere>(*sphereTemplate);
+		sphere->setPosition(light.position);
+		chunkEntities.push_back(sphere);
 	}
 
 	LightPoint getClosestLight(const ChunkCoord& coord) {
@@ -659,7 +671,6 @@ void generateChunk(const ChunkCoord& coord) {
 	    for (auto& chunk : chunks) {
 	        for (auto& entity : chunk.second) {
 				entity->renderForShadows(lightSpaceMatrix, shadowProgramID);
-	        	// print the position of each entity
 
 
 	        }
@@ -674,7 +685,7 @@ void generateChunk(const ChunkCoord& coord) {
 		const glm::mat4& viewMatrix
 	) {
 		bool found = false;
-		const float INTERACTION_CUBE_SIZE = 100.0f; // Size of the interaction cube
+		const float INTERACTION_CUBE_SIZE = 200.0f; // Size of the interaction cube
 
 		for (const auto& [_, chunk] : currentChunks) {
 			for (auto& entity : chunk) {
@@ -756,18 +767,6 @@ void generateChunk(const ChunkCoord& coord) {
 		}
 	}
 
-	//methos that returns all the bots in the city
-	std::vector<std::shared_ptr<MyBot>> getBots() {
-		std::vector<std::shared_ptr<MyBot>> bots;
-		for (const auto& [_, chunk] : currentChunks) {
-			for (auto& entity : chunk) {
-				if (auto bot = std::dynamic_pointer_cast<MyBot>(entity)) {
-					bots.push_back(bot);
-				}
-			}
-		}
-		return bots;
-	}
 };
 
 

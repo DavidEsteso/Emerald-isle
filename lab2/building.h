@@ -253,9 +253,7 @@ struct Building : public Entity{
 	GLuint mvpMatrixID;
 	GLuint textureSamplerID;
 
-	GLuint lightPositionID;
-	GLuint lightIntensityID;
-	GLuint lightColorID;
+
 	GLuint normalMatrixID;
 
 	void initialize(glm::vec3 position, glm::vec3 scale, const char* cubemapPath) {
@@ -350,9 +348,6 @@ struct Building : public Entity{
 		projectionMatrixID = glGetUniformLocation(programID, "projection");
 		modelMatrixID = glGetUniformLocation(programID, "model");
 
-		lightPositionID = glGetUniformLocation(programID, "lightPosition");
-		lightIntensityID = glGetUniformLocation(programID, "lightIntensity");
-		lightColorID = glGetUniformLocation(programID, "lightColor");
 
 		cameraPosID = glGetUniformLocation(programID, "cameraPosition");
 
@@ -362,30 +357,7 @@ struct Building : public Entity{
 	}
 
 
-	void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) {
-		glUseProgram(shadowProgramID);
 
-		GLuint lightSpaceMatrixID = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
-
-		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
-
-		glEnableVertexAttribArray(0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
-
-		glDrawElements(
-			GL_TRIANGLES,
-			36,
-			GL_UNSIGNED_INT,
-			(void*)0
-		);
-
-		glDisableVertexAttribArray(0);
-	}
     void render(glm::mat4 cameraMatrix, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, glm::vec3 eye_center, GLuint shadowMapTexture, glm::mat4 lightSpaceMatrix) {
 		glUseProgram(programID);
 		glBindVertexArray(vertexArrayID);
@@ -418,15 +390,10 @@ struct Building : public Entity{
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureID);
 		glUniform1i(cubemapTextureID, 0);
 
-		glUniform3fv(lightPositionID, 1, &LightPosition[0]);
-		glUniform3fv(lightIntensityID, 1, &lightIntensity[0]);
-		glUniform3fv(lightColorID, 1, &LightColor[0]);
 
 		glm::mat4 normalMatrix = glm::transpose(glm::inverse(modelMatrix));
 		glUniformMatrix4fv(normalMatrixID, 1, GL_FALSE, &normalMatrix[0][0]);
 
-		GLuint lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");
-		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
 
 
         // ------------------------------------------
@@ -443,6 +410,31 @@ struct Building : public Entity{
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
         //glDisableVertexAttribArray(2);
+	}
+
+	void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) {
+		glUseProgram(shadowProgramID);
+
+		GLuint lightSpaceMatrixID = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
+
+		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+
+		glEnableVertexAttribArray(0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+
+		glDrawElements(
+			GL_TRIANGLES,
+			36,
+			GL_UNSIGNED_INT,
+			(void*)0
+		);
+
+		glDisableVertexAttribArray(0);
 	}
 
 	void cleanup() override{

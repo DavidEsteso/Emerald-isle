@@ -27,8 +27,7 @@ struct MyBot : public Entity{
 	// Shader variable IDs
 	GLuint mvpMatrixID;
 	GLuint jointMatricesID;
-	GLuint lightPositionID;
-	GLuint lightIntensityID;
+
 	GLuint jointCountID;
 
 	tinygltf::Model model;
@@ -449,7 +448,6 @@ struct MyBot : public Entity{
 		this->scale = scale;
 		this->rotation = rotation;
 
-		updateModelMatrix();
 		// Modify your path if needed
 		if (!loadModel(model, "../lab2/models/bot/untitled.gltf")) {
 			std::cout << "Failed to load model" << std::endl;
@@ -484,8 +482,7 @@ struct MyBot : public Entity{
 
 		// Get a handle for GLSL variables
 		mvpMatrixID = glGetUniformLocation(programID, "MVP");
-		lightPositionID = glGetUniformLocation(programID, "lightPosition");
-		lightIntensityID = glGetUniformLocation(programID, "lightIntensity");
+
 
 		jointMatricesID = glGetUniformLocation(programID, "jointMatrices");  // For joint matrices
 
@@ -518,6 +515,11 @@ struct MyBot : public Entity{
 		glUseProgram(programID);
 
 		updateModelMatrix();
+
+		//pass model matrix
+		GLuint modelMatrixID = glGetUniformLocation(programID, "model");
+		glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
+
 
 		glm::mat4 mvp = cameraMatrix * modelMatrix;
 		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);

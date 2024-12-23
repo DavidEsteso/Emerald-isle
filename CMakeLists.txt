@@ -50,6 +50,7 @@ add_executable(lab2_building
 		lab2/tea.h
 		lab2/spire.h
         lab2/obelisk.h
+		lab2/sphere.h
 )
 
 # Link the necessary libraries to the first executable

@@ -44,7 +44,9 @@ float fbm(vec3 p) {
 void main() {
     vec3 normal = normalize(fragNormal);
     vec3 lightDir = normalize(lightPos - fragPos);
-    float diff = max(dot(normal, lightDir), 0.0);
+
+    float wrap = 0.5;
+    float diff = max((dot(normal, lightDir) + wrap) / (1.0 + wrap), 0.0);
 
     vec3 pos = fragPos * 0.5;
     float n = fbm(pos);
@@ -63,10 +65,11 @@ void main() {
     float cracks = smoothstep(0.4, 0.5, noise(pos * 3.0));
     finalColor *= (1.0 - cracks * 0.3);
 
-    vec3 ambient = finalColor * 0.3;
+    float ambientStrength = 0.4;
+    vec3 ambient = finalColor * ambientStrength;
     vec3 diffuse = finalColor * lightColor * diff * lightIntensity;
 
-    vec3 result =  diffuse;
+    vec3 result = ambient + diffuse;
 
     fragmentColor = vec4(result, 1.0);
 }

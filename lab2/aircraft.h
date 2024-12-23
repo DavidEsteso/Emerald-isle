@@ -122,7 +122,7 @@ GLuint LoadTextureAir(const std::string& path) {
 
 }
 
-float cameraSpeed = 5.0f;
+float cameraSpeed = 30.0f;
 float minHeight = 2.0f;
 float maxHeight = 10.0f;
 
@@ -298,19 +298,22 @@ struct Aircraft : public Entity {
 
 void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
         // Static time tracking to ensure consistent animation across frames
+        if(hasInteracted)
+        {
+            return;
+        }
         glBindVertexArray(vertexArrayID);
 
         static auto startTime = std::chrono::high_resolution_clock::now();
         auto currentRenderTime = std::chrono::high_resolution_clock::now();
 
-        // Calculate total elapsed time
         float totalElapsedTime = std::chrono::duration<float>(currentRenderTime - startTime).count();
 
-        float floatSpeed = 1.0f;       // Speed of floating animation
-        float floatAmplitude = 2.5f;  // Maximum vertical offset
-        float animationDuration = 2.0f; // Full animation cycle duration
+        float floatSpeed = 1.0f;
+        float floatAmplitude = 1.5f;
+        float animationDuration = 3.0f;
 
-        static float lastVerticalOffset = 0.0f; // Tracks last vertical offset
+        static float lastVerticalOffset = 0.0f;
 
         float verticalOffset;
         if (!isInteractable) {
@@ -318,9 +321,9 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
             float cyclePosition = fmod(totalElapsedTime * floatSpeed, animationDuration) / animationDuration;
             float angle = cyclePosition * 2.0f * M_PI;
 
-            float baseOffset = sin(angle); // Sinusoidal movement
+            float baseOffset = sin(angle);
 
-            float transitionZone = 0.1f; // Zone for smooth transition
+            float transitionZone = 0.1f;
 
             float distToTop = abs(angle - M_PI * 0.5f);
             float distToBottom = abs(angle - M_PI * 1.5f);
@@ -330,28 +333,24 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
                 float t = 1.0f - (minDist / transitionZone);
                 float smoothFactor = t * t; // Quadratic for sharper transitions
 
-                // Adjust vertical offset based on position (top or bottom)
                 if (distToTop < distToBottom) {
                     verticalOffset = floatAmplitude * (1.0f - (1.0f - smoothFactor) * (1.0f - sin(angle)));
                 } else {
                     verticalOffset = floatAmplitude * (-1.0f + (1.0f - smoothFactor) * (1.0f + sin(angle)));
                 }
             } else {
-                verticalOffset = floatAmplitude * baseOffset; // Standard sine-based movement
+                verticalOffset = floatAmplitude * baseOffset;
             }
 
-            lastVerticalOffset = verticalOffset; // Save last offset
+            lastVerticalOffset = verticalOffset;
         } else {
             // Fix the position when interactable
             verticalOffset = 0.0f;
-
         }
-
 
     // Update position in-place
     position = position + glm::vec3(0.0f, verticalOffset, 0.0f);
 
-    // Rest of the existing render method remains the same
     glUseProgram(programID);
 
     glEnableVertexAttribArray(0);
@@ -387,7 +386,6 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
         int currentMaterialID = material_indices[i];
 
         if (currentMaterialID != lastMaterialID) {
-            // Draw the previous block (if any)
             if (lastMaterialID >= 0) {
                 size_t count = i - startIndex;
                 glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)(startIndex * sizeof(unsigned int)));
@@ -430,10 +428,8 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
     GLint contourUniformLocation = glGetUniformLocation(programID, "enableContour");
     GLint viewPosLocation = glGetUniformLocation(programID, "viewPos");
 
-    // Configurar la posición de la vista
     glUniform3fv(viewPosLocation, 1, &cameraPos[0]);
 
-    // Establecer si se habilita el contorno
     glUniform1i(contourUniformLocation, isInteractable ? 0 : 0);
 
     size_t count = material_indices.size() - startIndex;
@@ -444,68 +440,6 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
     glDisableVertexAttribArray(2);
 }
 
-
-
-
-    void setupFloatingAnimation() {
-        keyframes.clear();
-
-        const int numKeyframes = 12;
-        for (int i = 0; i < numKeyframes; i++) {
-            float t = (float)i / (numKeyframes - 1) * animationDuration;
-
-            float phase = (t / animationDuration) * 2.0f * M_PI;
-
-            float primaryMotion = sin(phase) * moveRange.primaryScale;
-            float secondaryMotion = sin(phase * 2.0f) * moveRange.secondaryScale;
-
-            float heightOffset = (primaryMotion + secondaryMotion) * floatAmplitude * floatScale;
-
-            heightOffset = std::clamp(heightOffset, moveRange.minHeight, moveRange.maxHeight);
-
-            float y = position.y + heightOffset;
-
-            keyframes.push_back({t, glm::vec3(position.x, y, position.z)});
-        }
-    }
-
-    glm::vec3 interpolatePosition(float time) {
-        time = fmod(time, animationDuration);
-
-        KeyFrame* k1 = nullptr;
-        KeyFrame* k2 = nullptr;
-
-        for (size_t i = 0; i < keyframes.size() - 1; i++) {
-            if (time >= keyframes[i].time && time <= keyframes[i + 1].time) {
-                k1 = &keyframes[i];
-                k2 = &keyframes[i + 1];
-                break;
-            }
-        }
-
-        if (!k1 || !k2) {
-            return position;
-        }
-
-        float t = (time - k1->time) / (k2->time - k1->time);
-        t = easeInOutCubic(t);
-
-        // Enhanced smoothing for larger range
-        float extremeThreshold = 0.25f;
-        if (t < extremeThreshold) {
-            t = smoothstep(0.0f, extremeThreshold, t) * extremeThreshold;
-        } else if (t > (1.0f - extremeThreshold)) {
-            t = (1.0f - extremeThreshold) + smoothstep(0.0f, extremeThreshold, t - (1.0f - extremeThreshold)) * extremeThreshold;
-        }
-
-        glm::vec3 interpolatedPos = k1->position * (1.0f - t) + k2->position * t;
-
-        // Add enhanced secondary motion
-        float secondaryMotion = sin(time * 2.5f) * 0.15f * floatAmplitude * moveRange.secondaryScale;
-        interpolatedPos.y += secondaryMotion;
-
-        return interpolatedPos;
-    }
 
 
 
@@ -551,13 +485,14 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
         }
     }
     void cleanup() override {
-        //cleanpup
+
         glDeleteBuffers(1, &vertexBufferID);
         glDeleteBuffers(1, &normalBufferID);
         glDeleteBuffers(1, &uvBufferID);
         glDeleteBuffers(1, &indexBufferID);
         glDeleteVertexArrays(1, &vertexArrayID);
         glDeleteProgram(programID);
+
 
     }
 
