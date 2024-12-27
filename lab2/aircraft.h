@@ -145,20 +145,17 @@ struct Aircraft : public Entity {
 
     bool isInteractable = false;
     bool central = false;
-    std::string interactionMessage = "Press ENTER to interact with aircraft";
 
     bool hasInteracted = false;
 
     void setInteractable(bool interactable) {
         isInteractable = interactable;
-        std::cout << "Aircraft interaction found!" << std::endl;
-
     }
 
     void onInteract() {
         cleanup();
         hasInteracted = true;
-        cameraSpeed = 5.0f;
+        cameraSpeed = 30.0f;
         maxHeight = 1000.0f;
         isCameraMoving = true;
     }

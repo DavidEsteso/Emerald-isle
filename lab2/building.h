@@ -33,6 +33,7 @@ GLuint LoadCubeMap(const char* cubemapDir) {
 		"up.png", "down.png",
 		"front.png", "back.png"
 	};
+	stbi_set_flip_vertically_on_load(false);
 	for (unsigned int i = 0; i < 6; i++) {
 		std::string filename = std::string(cubemapDir) + "" + faces[i];
 		// Load image, create OpenGL texture
@@ -53,6 +54,7 @@ GLuint LoadCubeMap(const char* cubemapDir) {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	stbi_set_flip_vertically_on_load(true);
 	return textureID;
 }
 

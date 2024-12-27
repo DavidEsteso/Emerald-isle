@@ -29,13 +29,14 @@
 #include <tree.h>
 #include <aircraft.h>
 #include <entity.h>
-#include <sky.h>
 #include <bot.h>
 #include <stb_image_write.h>
 #include <spire.h>
 #include <obelisk.h>
 #include <tea.h>
 #include <sphere.h>
+#include <sky.h>
+
 
 
 // OpenGL camera view parameters
@@ -387,7 +388,7 @@ struct InfiniteCity {
 
     			const int numCrystals = 5 + (rng() % 10);
     			const float centerArea = CHUNK_SIZE * 0.2f;
-    			const float baseWidth = 16.0f;
+    			const float baseWidth = 32.0f;
 
     			std::vector<glm::vec2> crystalPositions;
 
@@ -405,7 +406,6 @@ struct InfiniteCity {
     			auto firstCrystal = std::make_shared<Building>(*buildingTemplates[0]);
     			firstCrystal->setScale(glm::vec3(baseWidth * firstScaleX, firstHeight, baseWidth * firstScaleZ));
     			firstCrystal->setPosition(glm::vec3(centerPos.x, firstHeight , centerPos.y));
-    			firstCrystal->setRotation(glm::vec3(0, 0, 0));
     			chunkEntities.push_back(firstCrystal);
 
     			for (int i = 1; i < numCrystals; i++) {
@@ -434,7 +434,7 @@ struct InfiniteCity {
     				crystal->setScale(glm::vec3(baseWidth * randomScaleX, randomHeight, baseWidth * randomScaleZ));
     				crystal->setPosition(glm::vec3(pos.x, randomHeight, pos.y));
     				crystal->setRotation(randomRotation);
-    				chunkEntities.push_back(crystal);
+    				//chunkEntities.push_back(crystal);
     			}
 
     		}
@@ -634,6 +634,7 @@ struct InfiniteCity {
 					!(coord.x == 0 && coord.z == 0))
 				{
 				chunksToRemove.push_back(coord);
+				lightPoints.erase(getLightGroupCoord(coord));
 				}
 		}
 

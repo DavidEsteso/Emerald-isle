@@ -33,7 +33,7 @@ add_library(tinyobjloader STATIC
 
 # Create the first executable, lab2_building
 add_executable(lab2_building
-		lab2/lab2_building.cpp
+        lab2/main.cpp
 		lab2/render/shader.cpp
 		lab2/sky.h
 		lab2/building.h

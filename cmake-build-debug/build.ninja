@@ -81,8 +81,8 @@ build libtinyobjloader.a: CXX_STATIC_LIBRARY_LINKER__tinyobjloader_Debug CMakeFi
 
 build cmake_object_order_depends_target_lab2_building: phony || cmake_object_order_depends_target_glad cmake_object_order_depends_target_glfw cmake_object_order_depends_target_tinyobjloader
 
-build CMakeFiles/lab2_building.dir/lab2/lab2_building.cpp.obj: CXX_COMPILER__lab2_building_unscanned_Debug C$:/CG/lab2/lab2/lab2_building.cpp || cmake_object_order_depends_target_lab2_building
-  DEP_FILE = CMakeFiles\lab2_building.dir\lab2\lab2_building.cpp.obj.d
+build CMakeFiles/lab2_building.dir/lab2/main.cpp.obj: CXX_COMPILER__lab2_building_unscanned_Debug C$:/CG/lab2/lab2/main.cpp || cmake_object_order_depends_target_lab2_building
+  DEP_FILE = CMakeFiles\lab2_building.dir\lab2\main.cpp.obj.d
   FLAGS = -g -fdiagnostics-color=always
   INCLUDES = -IC:/CG/lab2/external/glfw-3.1.2/include -IC:/CG/lab2/external/glm-0.9.7.1 -IC:/CG/lab2/external/glad-opengl-3.3/include -IC:/CG/lab2/external/tinyobjloader -IC:/CG/lab2/external/tinygltf-2.9.3 -IC:/CG/lab2/external -IC:/CG/lab2/lab2 -IC:/CG/lab2/external/glad-3.3/include
   OBJECT_DIR = CMakeFiles\lab2_building.dir
@@ -110,7 +110,7 @@ build CMakeFiles/lab2_building.dir/lab2/implementations.cpp.obj: CXX_COMPILER__l
 #############################################
 # Link the executable lab2_building.exe
 
-build lab2_building.exe: CXX_EXECUTABLE_LINKER__lab2_building_Debug CMakeFiles/lab2_building.dir/lab2/lab2_building.cpp.obj CMakeFiles/lab2_building.dir/lab2/render/shader.cpp.obj CMakeFiles/lab2_building.dir/lab2/implementations.cpp.obj | glfw3dll.a libglad.dll.a libtinyobjloader.a || glfw3.dll libglad.dll libtinyobjloader.a
+build lab2_building.exe: CXX_EXECUTABLE_LINKER__lab2_building_Debug CMakeFiles/lab2_building.dir/lab2/main.cpp.obj CMakeFiles/lab2_building.dir/lab2/render/shader.cpp.obj CMakeFiles/lab2_building.dir/lab2/implementations.cpp.obj | glfw3dll.a libglad.dll.a libtinyobjloader.a || glfw3.dll libglad.dll libtinyobjloader.a
   FLAGS = -g
   LINK_LIBRARIES = -lopengl32  -lglu32  glfw3dll.a  libglad.dll.a  libtinyobjloader.a  -lopengl32  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
   OBJECT_DIR = CMakeFiles\lab2_building.dir
