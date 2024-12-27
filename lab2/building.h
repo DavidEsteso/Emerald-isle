@@ -97,44 +97,6 @@ struct Building : public Entity{
 		-1.0f, -1.0f, 1.0f,
 	};
 
-	GLfloat color_buffer_data[72] = {
-		// Front, red
-		1.0f, 0.0f, 0.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f, 0.0f, 0.0f,
-
-		// Back, yellow
-		1.0f, 1.0f, 0.0f,
-		1.0f, 1.0f, 0.0f,
-		1.0f, 1.0f, 0.0f,
-		1.0f, 1.0f, 0.0f,
-
-		// Left, green
-		0.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
-
-		// Right, cyan
-		0.0f, 1.0f, 1.0f,
-		0.0f, 1.0f, 1.0f,
-		0.0f, 1.0f, 1.0f,
-		0.0f, 1.0f, 1.0f,
-
-		// Top, blue
-		0.0f, 0.0f, 1.0f,
-		0.0f, 0.0f, 1.0f,
-		0.0f, 0.0f, 1.0f,
-		0.0f, 0.0f, 1.0f,
-
-		// Bottom, magenta
-		1.0f, 0.0f, 1.0f,
-		1.0f, 0.0f, 1.0f,
-		1.0f, 0.0f, 1.0f,
-		1.0f, 0.0f, 1.0f,
-	};
-
 	GLuint index_buffer_data[36] = {		// 12 triangle faces of a box
 		0, 1, 2,
 		0, 2, 3,
@@ -237,7 +199,6 @@ struct Building : public Entity{
 	// OpenGL buffers
 	GLuint vertexArrayID;
 
-	GLuint colorBufferID;
 	GLuint uvBufferID;
 	GLuint textureID;
 	GLuint cubemapTextureID;
@@ -275,46 +236,12 @@ struct Building : public Entity{
 		glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(normal_buffer_data), normal_buffer_data, GL_STATIC_DRAW);
 
-		// Create a vertex buffer object to store the color data
-        // TODO:
-		glGenBuffers(1, &colorBufferID);
-		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
 
 
-		for (int i = 0; i < 72; ++i) color_buffer_data[i] = 1.0f;
 
-		glBufferData(GL_ARRAY_BUFFER, sizeof(color_buffer_data), color_buffer_data, GL_STATIC_DRAW);
-
-		/**
-
-		float height = scale.y;
-		float width = scale.x;
-		float depth = scale.z;
-
-		for (int i = 0; i < 24; ++i) {
-			if (i < 8) {
-				// Faces along the x-y plane (front and back)
-				uv_buffer_data[2 * i] *= width / 16;
-				uv_buffer_data[2 * i + 1] *= height / 16;
-			} else if (i < 16) {
-				// Faces along the y-z plane (left and right sides)
-				uv_buffer_data[2 * i] *= depth / 16;
-				uv_buffer_data[2 * i + 1] *= height / 16;
-			} else {
-				// Faces along the x-z plane (top and bottom)
-				uv_buffer_data[2 * i] *= width / 16;
-				uv_buffer_data[2 * i + 1] *= depth / 16;
-			}
-		}
-		**/
-		// --------------------
-
-		// TODO: Create a vertex buffer object to store the UV data--DONE
-		// --------------------------------------------------------
 		glGenBuffers(1, &uvBufferID);
 		glBindBuffer(GL_ARRAY_BUFFER, uvBufferID);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(uv_buffer_data), uv_buffer_data, GL_STATIC_DRAW);
-        // --------------------------------------------------------
 
 		// Create an index buffer object to store the index data that defines triangle faces
 		glGenBuffers(1, &indexBufferID);
@@ -330,23 +257,12 @@ struct Building : public Entity{
 		{
 			std::cerr << "Failed to load shaders." << std::endl;
 		}
-		initLightUniforms();
 
-
-		// Get a handle for our "MVP" uniform
-		//mvpMatrixID = glGetUniformLocation(programID, "MVP");
-
-        // TODO: Load a texture--DONE
-        // --------------------
-		//textureID = LoadTextureTileBox(texturePath);
-        // --------------------
-
-        // TODO: Get a handle to texture sampler--DONE
-        // -------------------------------------
 		cubemapSamplerID = glGetUniformLocation(programID, "cubemap");
 		viewMatrixID = glGetUniformLocation(programID, "view");
 		projectionMatrixID = glGetUniformLocation(programID, "projection");
 		modelMatrixID = glGetUniformLocation(programID, "model");
+
 
 
 		cameraPosID = glGetUniformLocation(programID, "cameraPosition");
@@ -371,17 +287,7 @@ struct Building : public Entity{
 		glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-		// TODO: Model transform
-		// -----------------------
 
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, shadowMapTexture);
-		GLuint shadowMapID = glGetUniformLocation(programID, "shadowMap");
-		glUniform1i(shadowMapID, 1);
-
-        // -----------------------
-
-		// Set model-view-projection matrix
 		glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
 		glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &viewMatrix[0][0]);
 		glUniformMatrix4fv(projectionMatrixID, 1, GL_FALSE, &projectionMatrix[0][0]);
@@ -391,15 +297,10 @@ struct Building : public Entity{
 		glUniform1i(cubemapTextureID, 0);
 
 
-		glm::mat4 normalMatrix = glm::transpose(glm::inverse(modelMatrix));
-		glUniformMatrix4fv(normalMatrixID, 1, GL_FALSE, &normalMatrix[0][0]);
 
-
-
-        // ------------------------------------------
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
 
-		// Draw the box
+		// Draw
 		glDrawElements(
 			GL_TRIANGLES,      // mode
 			36,    			   // number of indices
@@ -409,43 +310,20 @@ struct Building : public Entity{
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
-        //glDisableVertexAttribArray(2);
+        glDisableVertexAttribArray(2);
 	}
 
-	void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) {
-		glUseProgram(shadowProgramID);
 
-		GLuint lightSpaceMatrixID = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
-
-		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
-
-		glEnableVertexAttribArray(0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
-
-		glDrawElements(
-			GL_TRIANGLES,
-			36,
-			GL_UNSIGNED_INT,
-			(void*)0
-		);
-
-		glDisableVertexAttribArray(0);
-	}
 
 	void cleanup() override{
 		glDeleteBuffers(1, &vertexBufferID);
-		glDeleteBuffers(1, &colorBufferID);
 		glDeleteBuffers(1, &indexBufferID);
 		glDeleteVertexArrays(1, &vertexArrayID);
-		//glDeleteBuffers(1, &uvBufferID);
-		//glDeleteTextures(1, &textureID);
+		glDeleteBuffers(1, &uvBufferID);
+		glDeleteTextures(1, &textureID);
 		glDeleteProgram(programID);
 		glDeleteTextures(1, &cubemapTextureID);
+
 	}
 	glm::vec3 getPosition() const {
 		return position;

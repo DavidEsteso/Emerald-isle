@@ -15,7 +15,6 @@ uniform int isShoulderUniform;
 
 out vec3 worldPosition;
 out vec3 worldNormal;
-out vec3 viewDirection;
 flat out int isShoulderOut;
 
 void main() {
@@ -39,7 +38,6 @@ void main() {
     mat3 normalMatrix = mat3(transpose(inverse(model)));
     worldNormal = normalize(normalMatrix * skinnedNormal.xyz);
 
-    viewDirection = normalize(viewPos - worldPosition);
 
     gl_Position = MVP * skinnedPosition;
 

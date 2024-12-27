@@ -42,7 +42,6 @@ add_executable(lab2_building
         lab2/tree.h
 		lab2/aircraft.h
 		lab2/entity.h
-		lab2/TextRenderer.h
 		lab2/bot.h
 		external/tinygltf-2.9.3/tiny_gltf.h
 		lab2/implementations.cpp

@@ -55,6 +55,7 @@ struct Spire : public Entity {
         position = pos;
         scale = scl;
         scale.z = 10.0f;
+        // Correct rotation
         rotation.z = 90.0f;
 
 
@@ -231,20 +232,7 @@ struct Spire : public Entity {
         glDeleteProgram(programID);
     }
 
-    void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) override {
-        // Basic shadow rendering implementation if needed
-        glUseProgram(shadowProgramID);
 
-        glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), position);
-        modelMatrix = glm::scale(modelMatrix, scale);
-        glm::mat4 mvp = lightSpaceMatrix * modelMatrix;
-
-        GLuint lightSpaceMatrixLoc = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
-        glUniformMatrix4fv(lightSpaceMatrixLoc, 1, GL_FALSE, &mvp[0][0]);
-
-        glBindVertexArray(vertexArrayID);
-        glDrawElements(GL_TRIANGLES, index_buffer_data.size(), GL_UNSIGNED_INT, 0);
-    }
 };
 
 

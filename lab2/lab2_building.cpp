@@ -28,7 +28,6 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 
-
 float yaw = glm::degrees(atan2(front.z, front.x));
 
 
@@ -59,7 +58,7 @@ int main(void)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow(1024 * 2, 768 * 2 , "Lab 2", NULL, NULL);
+	window = glfwCreateWindow(1024 * 2, 768 * 2 , "Emerald Isle", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cerr << "Failed to open a GLFW window." << std::endl;
@@ -120,7 +119,7 @@ int main(void)
 	//aircraft.initialize(aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
 
 	Sky sky;
-	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(2000.0f, 2000.0f, 2000.0f), skyTexturePaths);
+	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(4000.0f, 4000.0f, 4000.0f), skyTexturePaths);
 
 	//MyBot bot;
 	//bot.initialize(tree_position, glm::vec3(1, 1, 1));
@@ -148,7 +147,7 @@ int main(void)
 	glm::mat4 viewMatrix, projectionMatrix, viewMatrixSky;
     glm::float32 FoV = 45;
 	glm::float32 zNear = 0.1f;
-	glm::float32 zFar = 5000.0f;
+	glm::float32 zFar = 8000.0f;
 	projectionMatrix = glm::perspective(glm::radians(FoV), 4.0f / 3.0f, zNear, zFar);
 
 	static double lastTime = glfwGetTime();
@@ -176,35 +175,19 @@ int main(void)
 		}
 
 
-
 		viewMatrix = glm::lookAt(eye_center, lookat, up);
 		glm::mat4 vp = projectionMatrix * viewMatrix;
 
-		viewMatrixSky = glm::mat4(glm::mat3(viewMatrix)); // Remove translation
+		viewMatrixSky = glm::mat4(glm::mat3(viewMatrix)); // Remove translation from the view matrix
 		glm::mat4 vpSky = projectionMatrix * viewMatrixSky;
 		sky.render(vpSky);
 
 		currentTime = glfwGetTime();
 
-		//aircraft.render(vp, eye_center);
-		//aircraft.update(currentTime);
-		//tree.render(vp, eye_center);
-		//b.render(vp, viewMatrix, projectionMatrix, eye_center);
-		//ground.render(vp);
-		// Render the building
 		city.update(eye_center, currentTime);
 		city.render(vp, viewMatrix, projectionMatrix, eye_center);
-		//spire.render(vp,eye_center);
 
-		//obelisc.render(vp, eye_center);
-
-		//bot.render(vp);
-
-		//tree.render(vp, eye_center);
-
-
-
-
+		// Handle aircraft interaction
 		if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS && !hasInteracted) {
 			auto [aircraftPos, aircraftFound] = city.handleAircraftInteraction(eye_center, viewMatrix, projectionMatrix);
 
@@ -239,7 +222,6 @@ int main(void)
 
 	} // Check if the ESC key was pressed or the window was closed
 	while (!glfwWindowShouldClose(window));
-	// Clean up
 
 	// Clean up
 	city.cleanup();
@@ -294,8 +276,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
-
-
     // Camera movement with WASD
     glm::vec3 front = glm::normalize(glm::vec3(lookat.x - eye_center.x, 0.0f, lookat.z - eye_center.z));
     glm::vec3 right = glm::normalize(glm::cross(front, up));
@@ -336,8 +316,6 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     // Escape to close window
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
-
-
 
 
 }

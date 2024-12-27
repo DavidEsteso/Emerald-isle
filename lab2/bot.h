@@ -458,17 +458,13 @@ struct MyBot : public Entity{
 		// Prepare buffers for rendering
 		primitiveObjects = bindModel(model);
 
-		std::cout << "model binded" << std::endl;
 
 		// Prepare joint matrices
 		skinObjects = prepareSkinning(model);
 
-		std::cout << "skin prepared" << std::endl;
-
 		// Prepare animation data
 		animationObjects = prepareAnimation(model);
 
-		std::cout << "animation prepared" << std::endl;
 
 		// Create and compile our GLSL program from the shaders
 		programID = LoadShadersFromFile("../lab2/shaders/bot.vert", "../lab2/shaders/bot.frag");
@@ -490,24 +486,6 @@ struct MyBot : public Entity{
 
 
 
-		/**
-		// Just take the first skin/skeleton model
-		const tinygltf::Skin &skin = model.skins[0];
-
-		// Compute local transforms at each node
-		int rootNodeIndex = skin.joints[0];
-		std::vector<glm::mat4> localNodeTransforms(skin.joints.size());
-		computeLocalNodeTransform(model, rootNodeIndex, localNodeTransforms);
-
-		// Compute global transforms at each node
-		glm::mat4 parentTransform(1.0f);
-		std::vector<glm::mat4> globalNodeTransforms(skin.joints.size());
-		computeGlobalNodeTransform(model, localNodeTransforms, rootNodeIndex, parentTransform, globalNodeTransforms);
-
-		globalTransforms = globalNodeTransforms;
-		**/
-
-		std::cout << "Initialized" << std::endl;
 	}
 
 	void render(glm::mat4 cameraMatrix) {
@@ -555,7 +533,6 @@ struct MyBot : public Entity{
 void bindMesh(std::vector<PrimitiveObject> &primitiveObjects,
               tinygltf::Model &model,
               tinygltf::Mesh &mesh) {
-    std::cout << "Binding Mesh: " << mesh.name << std::endl;
 
     std::map<int, GLuint> vbos;
     for (size_t i = 0; i < model.bufferViews.size(); ++i) {
@@ -744,25 +721,16 @@ void bindModelNodes(std::vector<PrimitiveObject> &primitiveObjects,
 
 
 
-
-	void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) override {
-		glUseProgram(shadowProgramID);
-
-		// Set light space matrix uniform
-		GLuint lightSpaceMatrixID = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
-		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
-
-		// Set model matrix uniform
-		GLuint modelMatrixID = glGetUniformLocation(shadowProgramID, "model");
-		glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
-
-		// Draw model for shadow mapping
-		drawModel(primitiveObjects, model);
-	}
-
-
     void cleanup() override {
 		glDeleteProgram(programID);
+		for (size_t i = 0; i < primitiveObjects.size(); ++i) {
+			glDeleteVertexArrays(1, &primitiveObjects[i].vao);
+			for (auto &vbo : primitiveObjects[i].vbos) {
+				glDeleteBuffers(1, &vbo.second);
+			}
+		}
+
+
 	}
 
 

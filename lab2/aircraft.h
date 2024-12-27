@@ -14,24 +14,7 @@
 
 #include <chrono>
 
-struct KeyFrame {
-    float time; 
-    glm::vec3 position;
-};
 
-float smoothEaseInOut(float x) {
-    float t = (1 - cos(x * M_PI)) / 2;
-    return t * t * (3 - 2 * t);
-}
-
-float easeInOutCubic(float t) {
-    return t < 0.5f ? 4.0f * t * t * t : 1.0f - pow(-2.0f * t + 2.0f, 3.0f) / 2.0f;
-}
-
-float smoothstep(float edge0, float edge1, float x) {
-    float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
-    return t * t * (3.0f - 2.0f * t);
-}
 
 
 struct MaterialAir {
@@ -115,10 +98,7 @@ GLuint LoadTextureAir(const std::string& path) {
         unsigned char defaultColor[] = {128, 128, 128, 255};
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, defaultColor);
     }
-
-
     return textureID;
-
 
 }
 
@@ -149,7 +129,6 @@ struct Aircraft : public Entity {
 
     std::vector<MaterialAir> materials;
 
-    std::vector<KeyFrame> keyframes;
     float animationDuration;
     float currentTime;
     float floatAmplitude;
@@ -165,6 +144,7 @@ struct Aircraft : public Entity {
     } moveRange;
 
     bool isInteractable = false;
+    bool central = false;
     std::string interactionMessage = "Press ENTER to interact with aircraft";
 
     bool hasInteracted = false;
@@ -178,18 +158,24 @@ struct Aircraft : public Entity {
     void onInteract() {
         cleanup();
         hasInteracted = true;
-        cameraSpeed = 30.0f;
+        cameraSpeed = 5.0f;
         maxHeight = 1000.0f;
         isCameraMoving = true;
     }
 
-    void initialize(glm::vec3 pos, glm::vec3 scl) {
+
+
+    bool getIsCentral() {
+        return central;
+    }
+
+    void initialize(glm::vec3 pos, glm::vec3 scl, bool isCentral = false) {
 
         position = pos;
         scale = scl;
-        //ranodm rotation y axis
-        rotation.y = rand() % 360;
-        const char* modelPath = "../lab2/models/air/E45Aircraft_obj.obj";
+        central = isCentral;
+        const char* modelPath = "../lab2/models/air/aE45Aircraft_obj.obj";
+
         const char* materialBaseDir = "../lab2/models/air";
 
         floatAmplitude = 2.0f;
@@ -215,13 +201,8 @@ struct Aircraft : public Entity {
             return;
         }
 
-
         // Load materials first
         loadMaterials(materials_obj, materialBaseDir);
-
-
-
-
 
         // Load geometry
         for (const auto& shape : shapes) {
@@ -297,7 +278,7 @@ struct Aircraft : public Entity {
 
 
 void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
-        // Static time tracking to ensure consistent animation across frames
+        // if has interacted, not render anymore
         if(hasInteracted)
         {
             return;
@@ -310,7 +291,7 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
         float totalElapsedTime = std::chrono::duration<float>(currentRenderTime - startTime).count();
 
         float floatSpeed = 1.0f;
-        float floatAmplitude = 1.5f;
+        float floatAmplitude = 1.0f;
         float animationDuration = 3.0f;
 
         static float lastVerticalOffset = 0.0f;
@@ -496,9 +477,7 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
 
     }
 
-    void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) override {
-        // Implementation of renderForShadows function
-    }
+
 
 };
 

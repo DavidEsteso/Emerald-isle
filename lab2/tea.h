@@ -35,6 +35,14 @@ struct Tea : public Entity {
     GLuint modelMatrixID;
     GLuint viewPosID;
 
+    GLuint depthMapFBO;
+    GLuint shadowMapTexture;
+    GLuint shadowProgramID;
+    GLuint lightSpaceMatrixID;
+    GLuint lightSpaceMatrixID2;
+    GLuint shadowMapID;
+    glm::mat4 lightSpaceMatrix;
+
     void initialize(glm::vec3 pos, glm::vec3 scl) {
         position = pos;
         scale = scl;
@@ -123,15 +131,23 @@ struct Tea : public Entity {
         }
         initLightUniforms();
 
+        shadowProgramID = LoadShadersFromFile("../lab2/shaders/shadow.vert", "../lab2/shaders/shadow.frag");
+        if (shadowProgramID == 0) {
+            std::cerr << "Failed to load shadow shaders." << std::endl;
+            return;
+        }
+
 
         // Get uniform locations
         mvpMatrixID = glGetUniformLocation(programID, "MVP");
         modelMatrixID = glGetUniformLocation(programID, "model");
         viewPosID = glGetUniformLocation(programID, "viewPos");
+        lightSpaceMatrixID2 = glGetUniformLocation(programID, "lightSpaceMatrix");
+        shadowMapID = glGetUniformLocation(programID, "shadowMap");
+        lightSpaceMatrixID = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
 
-        // make the model longer in y axis
+        // Correct rotation
         rotation.z = 90.0f;
-
 
     }
 
@@ -171,7 +187,6 @@ struct Tea : public Entity {
         // Draw model
         glDrawElements(GL_TRIANGLES, index_buffer_data.size(), GL_UNSIGNED_INT, 0);
 
-        // Disable vertex attributes
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
         glDisableVertexAttribArray(2);
@@ -186,20 +201,6 @@ struct Tea : public Entity {
         glDeleteProgram(programID);
     }
 
-    void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) override {
-        // Basic shadow rendering implementation if needed
-        glUseProgram(shadowProgramID);
-
-        glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), position);
-        modelMatrix = glm::scale(modelMatrix, scale);
-        glm::mat4 mvp = lightSpaceMatrix * modelMatrix;
-
-        GLuint lightSpaceMatrixLoc = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
-        glUniformMatrix4fv(lightSpaceMatrixLoc, 1, GL_FALSE, &mvp[0][0]);
-
-        glBindVertexArray(vertexArrayID);
-        glDrawElements(GL_TRIANGLES, index_buffer_data.size(), GL_UNSIGNED_INT, 0);
-    }
 };
 
 #endif

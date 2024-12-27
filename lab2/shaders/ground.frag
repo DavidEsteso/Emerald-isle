@@ -7,7 +7,6 @@ in vec3 Color;
 
 out vec4 fragColor;
 
-// Textures
 uniform sampler2D diffuseTexture;
 uniform sampler2D specularTexture;
 uniform sampler2D reflectionMap;
@@ -44,29 +43,17 @@ void main() {
     float tiles = isSolarPanel ? 1.0 : 4.0;
     vec2 tiledUV = getTiledUV(UV, tiles);
 
-    float ambientStrength = 0.4;
-
     vec4 diffuseColor = texture(diffuseTexture, tiledUV);
-    vec4 specularValue = texture(specularTexture, tiledUV);
     vec4 reflectionValue = texture(reflectionMap, tiledUV);
+    float reflectionIntensity = 0.1;
 
-    float reflectionIntensity = isSolarPanel ? 0.5 : 0.5;
-
-    vec3 normal = normalize(Normal);
-    vec3 lightDir = normalize(lightPos - FragPos);
-
-    vec3 ambient = ambientStrength * lightColor;
-
-    float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor * diffuseColor.rgb;
-
-    vec3 finalColor = ( diffuse) * lightIntensity;
-
-
+    vec3 finalColor;
 
     if (isSolarPanel) {
+        finalColor = diffuseColor.rgb;
+
         float sunray = getSunrayEffect(UV, time);
-        vec3 rayColor = vec3(1.0, 0.9, 0.7) * lightIntensity;
+        vec3 rayColor = vec3(1.0, 0.9, 0.7);
         finalColor += rayColor * sunray * 0.2;
 
         vec2 gridUV = fract(UV * tiles);
@@ -75,7 +62,14 @@ void main() {
         finalColor *= (1.0 + sunray * 0.3);
 
         finalColor = mix(finalColor, reflectionValue.rgb, reflectionIntensity);
+    } else {
+        vec3 normal = normalize(Normal);
+        vec3 lightDir = normalize(lightPos - FragPos);
+        float diff = max(dot(normal, lightDir), 0.0);
+        vec3 diffuse = diff * lightColor * diffuseColor.rgb;
+        finalColor = diffuse * lightIntensity;
     }
 
     fragColor = vec4(finalColor, 1.0);
+
 }

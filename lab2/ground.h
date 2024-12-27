@@ -57,13 +57,7 @@ struct Ground : public Entity {
 		-1.0f, 1.0f, -1.0f,
 };
 
-	GLfloat color_buffer_data[12] = {
-		1.0f, 0.0f, 0.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f, 0.0f, 0.0f,
 
-	};
 
 	GLuint index_buffer_data[6] = {
 		0, 1, 2,
@@ -82,12 +76,7 @@ struct Ground : public Entity {
 
 	};
 
-	GLfloat normal_buffer_data[12] = {
-		0.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
-		};
+
 
     // ---------------------------
 
@@ -104,6 +93,7 @@ struct Ground : public Entity {
 	// Shader variable IDs
 	GLuint mvpMatrixID;
 	GLuint textureSamplerID;
+	GLuint isPanelID;
 
 
 	GLuint diffuseTextureID;
@@ -117,7 +107,6 @@ struct Ground : public Entity {
 
 	void initialize(glm::vec3 position, glm::vec3 scale, const char* texturePath)
 	{
-		// Define scale of the building geometry
 		this->position = position;
 		this->scale = scale;
 
@@ -125,7 +114,6 @@ struct Ground : public Entity {
 		glGenVertexArrays(1, &vertexArrayID);
 		glBindVertexArray(vertexArrayID);
 
-		// Create a vertex buffer object to store the vertex data
 		glGenBuffers(1, &vertexBufferID);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buffer_data), vertex_buffer_data, GL_STATIC_DRAW);
@@ -134,22 +122,12 @@ struct Ground : public Entity {
 		glGenBuffers(1, &colorBufferID);
 		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
 
-		glBufferData(GL_ARRAY_BUFFER, sizeof(color_buffer_data), color_buffer_data, GL_STATIC_DRAW);
 
-		glGenBuffers(1, &normalBufferID);
-		glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(normal_buffer_data), normal_buffer_data, GL_STATIC_DRAW);
 
-		// --------------------
-
-		// TODO: Create a vertex buffer object to store the UV data--DONE
-		// --------------------------------------------------------
 		glGenBuffers(1, &uvBufferID);
 		glBindBuffer(GL_ARRAY_BUFFER, uvBufferID);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(uv_buffer_data), uv_buffer_data, GL_STATIC_DRAW);
-		// --------------------------------------------------------
 
-		// Create an index buffer object to store the index data that defines triangle faces
 		glGenBuffers(1, &indexBufferID);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_buffer_data), index_buffer_data, GL_STATIC_DRAW);
@@ -165,17 +143,12 @@ struct Ground : public Entity {
 	     initLightUniforms();
 
 
-		// Get a handle for our "MVP" uniform
 		mvpMatrixID = glGetUniformLocation(programID, "MVP");
-
-
 		modelMatrixID = glGetUniformLocation(programID, "model");
-
-
+		isPanelID = glGetUniformLocation(programID, "isSolarPanel");
 		isPanel = std::string(texturePath).find("panel") != std::string::npos;
 
-
-
+		// Load textures depending on the type of ground
 		if (isPanel) {
 			std::string diffusePath = std::string(texturePath) + "/SolarPanel002_1K-JPG_Color.jpg";
 			std::string specularPath = std::string(texturePath) + "/SolarPanel002_1K-JPG_Roughness.jpg";
@@ -188,18 +161,11 @@ struct Ground : public Entity {
 		} else {
 			std::string diffusePath = std::string(texturePath) + "/floor_bricks_02_diff_1k.jpg";
 			std::string specularPath = std::string(texturePath) + "/floor_bricks_02_rough_1k.png";
-			std::string reflectionPath = std::string(texturePath) + "/floor_bricks_02_arm_1k.png";
 
 			diffuseTextureID = LoadTextureTileBox(diffusePath.c_str());
 			specularTextureID = LoadTextureTileBox(specularPath.c_str());
-			reflectionTextureID = LoadTextureTileBox(reflectionPath.c_str());
 
 		}
-
-		GLuint diffuseTextureLocation = glGetUniformLocation(programID, "diffuseTexture");
-		GLuint specularTextureLocation = glGetUniformLocation(programID, "specularTexture");
-		GLuint reflectionTextureLocation = glGetUniformLocation(programID, "reflectionMap");
-
 
 	}
 
@@ -215,32 +181,18 @@ struct Ground : public Entity {
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-		glEnableVertexAttribArray(1);
-		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-		glEnableVertexAttribArray(2);
-		glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
-		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, shadowMapTexture);
-		GLuint shadowMapID = glGetUniformLocation(programID, "shadowMap");
-		glUniform1i(shadowMapID, 1);
 
 		glm::mat4 mvp = cameraMatrix * getModelMatrix();
 
 		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
 
-		// TODO: Enable UV buffer and texture sampler--DONE
-		// ------------------------------------------
 		glEnableVertexAttribArray(3);
 		glBindBuffer(GL_ARRAY_BUFFER, uvBufferID);
 		glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-		// Set textureSampler to use texture unit 0
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, diffuseTextureID);
 		glUniform1i(glGetUniformLocation(programID, "diffuseTexture"), 0);
@@ -258,72 +210,10 @@ struct Ground : public Entity {
 		glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
 
 
-
-		//pass lightSpaceMatrix to shader
-		GLuint lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");
-		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
-
-		GLuint groundID = glGetUniformLocation(programID, "ground");
-		glUniform1i(groundID, 0);
+		glUniform1i(isPanelID, isPanel);
 
 
-		// si ground es true paso un 1 al shader sino un 0
-		if (ground)
-		{
-			GLuint groundID = glGetUniformLocation(programID, "ground");
-			glUniform1i(groundID, 1);
-		}
-
-		GLuint isSolarPanelLocation = glGetUniformLocation(programID, "isSolarPanel");
-
-		if (isPanel) {
-			glUniform1i(isSolarPanelLocation, 1);
-		} else {
-			glUniform1i(isSolarPanelLocation, 0);
-		}
-
-
-        // ------------------------------------------
-
-		// Draw the box
-		glDrawElements(
-			GL_TRIANGLES,      // mode
-			6,    			   // number of indices
-			GL_UNSIGNED_INT,   // type
-			(void*)0           // element array buffer offset
-		);
-
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(1);
-        //glDisableVertexAttribArray(2);
-	}
-
-
-
-	void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) {
-		glUseProgram(shadowProgramID);
-
-		GLuint modelLoc = glGetUniformLocation(shadowProgramID, "model");
-
-		modelMatrix = glm::mat4(1.0f);
-		modelMatrix = glm::translate(modelMatrix, position);
-		modelMatrix = glm::scale(modelMatrix, scale);
-
-
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &modelMatrix[0][0]);
-
-		GLuint lightSpaceMatrixID = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
-
-		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
-
-		glEnableVertexAttribArray(0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
-
+		// Draw the ground
 		glDrawElements(
 			GL_TRIANGLES,
 			6,
@@ -332,7 +222,10 @@ struct Ground : public Entity {
 		);
 
 		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
 	}
+
 
 
 
@@ -341,9 +234,10 @@ struct Ground : public Entity {
 		glDeleteBuffers(1, &colorBufferID);
 		glDeleteBuffers(1, &indexBufferID);
 		glDeleteVertexArrays(1, &vertexArrayID);
-		//glDeleteBuffers(1, &uvBufferID);
-		//glDeleteTextures(1, &textureID);
+		glDeleteBuffers(1, &uvBufferID);
+		glDeleteTextures(1, &textureID);
 		glDeleteProgram(programID);
+
 	}
 	glm::vec3 getPosition() const {
 		return position;

@@ -13,24 +13,26 @@ uniform float lightIntensity;
 
 const float ambientStrength = 0.4;
 const float specularStrength = 0.5;
-const float shininess = 32.0;
+
+uniform float shininess;
+uniform float opacity;
+uniform vec3 diffuseColor;
+uniform vec3 specularColor;
+uniform vec3 ambientColor;
 
 void main() {
-    vec3 baseColor = texture(diffuseTexture, UV).rgb;
+    vec3 ambient = ambientStrength * ambientColor;
 
-    vec3 ambient = ambientStrength * lightColor;
-
-    vec3 normal = normalize(Normal);
+    vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(lightPos - FragPos);
-    float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor;
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * diffuseColor;
 
     vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 halfwayDir = normalize(lightDir + viewDir);
-    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
-    vec3 specular = specularStrength * spec * lightColor;
+    vec3 reflectDir = reflect(-lightDir, norm);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+    vec3 specular = specularStrength * spec * specularColor;
 
-    vec3 finalColor = (ambient + diffuse + specular) * baseColor * lightIntensity;
-
-    color = vec4(finalColor, 1.0);
+    vec3 result = (ambient + diffuse + specular) * lightColor * lightIntensity;
+    color = texture(diffuseTexture, UV) * vec4(result, opacity);
 }

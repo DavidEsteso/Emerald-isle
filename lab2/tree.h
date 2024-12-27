@@ -239,7 +239,7 @@ struct Tree : public Entity {
             }
         }
 
-        // Dibujar el último bloque
+        // Draw the last batch of triangles
         if (lastMaterialID >= 0) {
             size_t count = material_indices.size() - startIndex;
             glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)(startIndex * sizeof(unsigned int)));
@@ -264,11 +264,9 @@ struct Tree : public Entity {
                 glDeleteTextures(1, &material.specularMap);
             }
         }
+
     }
 
-    void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) override {
-        // Implementation of renderForShadows function
-    }
 };
 
 #endif

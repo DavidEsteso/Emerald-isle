@@ -2,7 +2,6 @@
 
 
 in vec3 worldNormal;
-in vec3 viewDirection;
 in vec3 worldPosition;
 
 uniform samplerCube cubemapSampler;
@@ -34,4 +33,5 @@ void main() {
     vec3 finalColor = mix(envColor, lighting, 0.5);
 
     fragColor = vec4(finalColor, 1.0);
+
 }

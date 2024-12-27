@@ -12,13 +12,6 @@
 
 class Entity {
 public:
-    static inline glm::vec3 LightColor = glm::vec3(1.0f, 0.5f, 0.7f);
-    static inline glm::vec3 wave500{0.0f, 255.0f, 146.0f};
-    static inline glm::vec3 wave600{255.0f, 190.0f, 0.0f};
-    static inline glm::vec3 wave700{205.0f, 0.0f, 0.0f};
-    static inline glm::vec3 lightIntensity = 3.0f * (8.0f * wave500 + 15.6f * wave600 + 18.4f * wave700);
-    static inline glm::vec3 LightPosition = glm::vec3(300.0f, 200.0f, 300.0f);
-
     GLuint vertexBufferID;
     GLuint indexBufferID;
 
@@ -29,19 +22,22 @@ public:
 
     GLuint programID;
 
-
-    // Nuevos uniforms para iluminación
     GLint uLightPos;
     GLint uLightColor;
     GLint uViewPos;
     GLint uLightIntensity;
 
+    glm::vec3 lightPos;
+    glm::vec3 lightColor;
+    glm::vec3 viewPos;
+    float lightIntensity;
+
+
     virtual void cleanup() = 0;
 
     virtual ~Entity() = default;
 
-    virtual void renderForShadows(const glm::mat4& lightSpaceMatrix, GLuint shadowProgramID) = 0;
-
+    // Setters
     virtual void setPosition(const glm::vec3& newPosition) {
         position = newPosition;
         updateModelMatrix();
@@ -56,7 +52,6 @@ public:
         rotation = newRotation;
         updateModelMatrix();
     }
-
 
     virtual void updateModelMatrix() {
         modelMatrix = glm::mat4(1.0f);
@@ -73,9 +68,9 @@ public:
     virtual void setLightUniforms(const glm::vec3& lightPos, const glm::vec3& lightColor,
                              const glm::vec3& viewPos, float intensity) {
         glUseProgram(programID);
-        glUniform3fv(uLightPos, 1, glm::value_ptr(lightPos));
-        glUniform3fv(uLightColor, 1, glm::value_ptr(lightColor));
-        glUniform3fv(uViewPos, 1, glm::value_ptr(viewPos));
+        glUniform3fv(uLightPos, 1, &lightPos[0]);
+        glUniform3fv(uLightColor, 1, &lightColor[0]);
+        glUniform3fv(uViewPos, 1, &viewPos[0]);
         glUniform1f(uLightIntensity, intensity);
 
     }

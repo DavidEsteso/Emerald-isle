@@ -1,42 +1,34 @@
 #version 330 core
 in vec2 TexCoord;
 flat in int faceIndex;
-
 uniform sampler2D faceSampler0;
 uniform sampler2D faceSampler1;
 uniform sampler2D faceSampler2;
 uniform sampler2D faceSampler3;
 uniform sampler2D faceSampler4;
 uniform sampler2D faceSampler5;
-
 out vec4 FragColor;
 
 void main() {
-    vec2 correctedTexCoord;
+    vec2 texCoord = TexCoord;
 
     switch(faceIndex) {
-        case 0: // Front
-        case 1: // Back
-        case 2: // Left
-        case 3: // Right
-        correctedTexCoord = vec2(1.0 - TexCoord.x, 1.0 - TexCoord.y);
-        break;
-        case 4: // Top
-        case 5: // Bottom
+        case 0: texCoord = vec2(1.0 - TexCoord.x, TexCoord.y); break;
+        case 1: texCoord = vec2(1.0 - TexCoord.x, TexCoord.y); break;
 
-        correctedTexCoord = vec2(TexCoord.x, 1.0 - TexCoord.y);
-        break;
-        default:
-        correctedTexCoord = TexCoord;
+        case 2: texCoord = vec2(1.0 - TexCoord.x, TexCoord.y); break;
+        case 3: texCoord = vec2(1.0 - TexCoord.x, TexCoord.y); break;
+
+        case 4: texCoord = vec2(TexCoord.x, TexCoord.y); break;
     }
+
     vec4 texColor;
     switch(faceIndex) {
-        case 0: texColor = texture(faceSampler0, correctedTexCoord); break;
-        case 1: texColor = texture(faceSampler1, correctedTexCoord); break;
-        case 2: texColor = texture(faceSampler2, correctedTexCoord); break;
-        case 3: texColor = texture(faceSampler3, correctedTexCoord); break;
-        case 4: texColor = texture(faceSampler4, correctedTexCoord); break;
-        case 5: texColor = texture(faceSampler5, correctedTexCoord); break;
+        case 0: texColor = texture(faceSampler0, texCoord); break;
+        case 1: texColor = texture(faceSampler1, texCoord); break;
+        case 2: texColor = texture(faceSampler2, texCoord); break;
+        case 3: texColor = texture(faceSampler3, texCoord); break;
+        case 4: texColor = texture(faceSampler4, texCoord); break;
         default: texColor = vec4(1.0, 0.0, 0.0, 1.0); break;
     }
     FragColor = texColor;

@@ -1,7 +1,6 @@
 #ifndef CITY_H
 #define CITY_H
 
-#include "TextRenderer.h"
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -51,23 +50,6 @@ static float viewDistance = 400.0f;
 
 glm::vec3 front = glm::normalize(lookat - eye_center);
 
-static void saveDepthTexture(GLuint fbo, std::string filename) {
-	int width = 1024;
-	int height = 1024;
-
-	int channels = 3;
-
-	std::vector<float> depth(width * height);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glReadBuffer(GL_DEPTH_COMPONENT);
-	glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, depth.data());
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	std::vector<unsigned char> img(width * height * 3);
-	for (int i = 0; i < width * height; ++i) img[3*i] = img[3*i+1] = img[3*i+2] = depth[i] * 255;
-
-	stbi_write_png(filename.c_str(), width, height, channels, img.data(), width * channels);
-}
 
 // Chunk coordinate structure definition
 struct ChunkCoord {
@@ -181,18 +163,17 @@ struct InfiniteCity {
 	std::shared_ptr<Sphere> sphereTemplate;
 
 
+
 	std::unordered_map<ChunkCoord, std::vector<std::shared_ptr<Entity>>, ChunkCoordHash> currentChunks;
 
 
 
-    const int CHUNK_SIZE = 192 *2;        // Size of chunk (6 buildings * (32*2 + 6))
-    const int RENDER_DISTANCE = 8;      // How many chunks to render in each direction
+    const int CHUNK_SIZE = 192 * 2;        // Size of chunk
+    const int RENDER_DISTANCE = 10;      // How many chunks to render in each direction
 
-	const float AIRCRAFT_SPAWN_PROBABILITY = 0.01f;
+	const float AIRCRAFT_SPAWN_PROBABILITY = 0.05f;
 
 	std::vector<std::shared_ptr<Entity>> currentEntities;
-
-
 
 
 	GLuint shadowMapFBO;
@@ -222,6 +203,7 @@ struct InfiniteCity {
 		initializeTemplates();
 	}
 
+	// initializes the templates for the objects that will be used in the city only once
 	void initializeTemplates() {
 		buildingTemplates.push_back(std::make_shared<Building>());
 		buildingTemplates[0]->initialize(
@@ -287,6 +269,7 @@ struct InfiniteCity {
 		);
 
 
+
 	}
 
 	ChunkCoord getCurrentChunk(const glm::vec3& cameraPos) {
@@ -304,210 +287,162 @@ struct InfiniteCity {
     }
 
 
-void generateChunk(const ChunkCoord& coord) {
+	void generateChunk(const ChunkCoord& coord) {
+	    // Initialize vector to store entities and random number generator
+	    std::vector<std::shared_ptr<Entity>> chunkEntities;
+	    std::seed_seq seed{coord.x, coord.z};
+	    std::mt19937 rng(seed);
 
-    std::vector<std::shared_ptr<Entity>> chunkEntities;
-	std::seed_seq seed{coord.x, coord.z};
-	std::mt19937 rng(seed);
+	    // Generate central chunk (0,0)
+	    if (coord.x == 0 && coord.z == 0) {
+	        generateLightForGroup(coord, chunkEntities);
+	        auto road = std::make_shared<Ground>(*roadGroundTemplate);
+	        road->setPosition(glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2, 0, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2));
+	        chunkEntities.push_back(road);
+	    }
+	    // Generate surrounding chunks
+	    else if (std::abs(coord.x) <= 1 && std::abs(coord.z) <= 1) {
+	        generateLightForGroup(coord, chunkEntities);
+	        auto road = std::make_shared<Ground>(*roadGroundTemplate);
+	        road->setPosition(glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2, 0, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2));
+	        chunkEntities.push_back(road);
+
+	        const float OFFSET = CHUNK_SIZE * 0.3f;
+
+	        // Place specific landmarks based on coordinates
+	        if (coord.x == -1 && coord.z == -1) {
+	            auto spire = std::make_shared<Spire>(*spireTemplate);
+	            spire->setPosition(glm::vec3(coord.x * CHUNK_SIZE, -30, coord.z * CHUNK_SIZE));
+	            chunkEntities.push_back(spire);
+	        } else if (coord.x == -1 && coord.z == 1) {
+	            auto tea = std::make_shared<Tea>(*teaTemplate);
+	            tea->setPosition(glm::vec3(coord.x * CHUNK_SIZE + OFFSET, 10, coord.z * CHUNK_SIZE + CHUNK_SIZE - OFFSET));
+	            chunkEntities.push_back(tea);
+	        } else if (coord.x == 1 && coord.z == -1) {
+	            auto obelisk = std::make_shared<Obelisk>(*obeliskTemplate);
+	            obelisk->setPosition(glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE - OFFSET, 0, coord.z * CHUNK_SIZE + OFFSET));
+	            chunkEntities.push_back(obelisk);
+	        } else if (coord.x == 1 && coord.z == 1) {
+	            auto aircraftCentral = std::make_shared<Aircraft>(*aircraftTemplate);
+	            aircraftCentral->initialize(glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2, 100, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2), glm::vec3(30, 30, 30), true);
+	            chunkEntities.push_back(aircraftCentral);
+	        }
+	    }
+	    // Generate city chunks
+	    else
+	    {
+		    bool isRoad = isRoadFunc(coord);
+
+    		if (isRoad) {
+    			generateLightForGroup(coord, chunkEntities);
+    			auto road = std::make_shared<Ground>(*roadGroundTemplate);
+    			road->setPosition(glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2, 0, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2));
+    			chunkEntities.push_back(road);
+
+    			// Randomly spawn an aircraft
+    			float height = 300.0f + (rng() % 300);
+    			if (rng() % 100 < AIRCRAFT_SPAWN_PROBABILITY * 100) {
+    				auto aircraft = std::make_shared<Aircraft>(*aircraftTemplate);
+    				aircraft->setPosition(glm::vec3(coord.x * CHUNK_SIZE + (rand() % CHUNK_SIZE), height, coord.z * CHUNK_SIZE + (rand() % CHUNK_SIZE)));
+    				aircraft->setRotation(glm::vec3(0, rand() % 360, 0));
+    				chunkEntities.push_back(aircraft);
+    			}
+
+    			// Robot with a 20% chance
+    			glm::vec3 centerPosition(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2, 0, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2);
+    			if (rng() % 10 < 2) {
+    				auto bot = std::make_shared<MyBot>(*botTemplate);
+    				bot->setPosition(glm::vec3(centerPosition.x, -33, centerPosition.z));
+    				bot->setRotation(glm::vec3(0, rand() % 360, 0));
+    				chunkEntities.push_back(bot);
+    			}
+
+    			glm::vec3 edgePositions[4];
+
+    			const float inset = 10.0f;
+
+    			edgePositions[0] = glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5), 0, coord.z * CHUNK_SIZE + inset);
+    			edgePositions[1] = glm::vec3((coord.x + 1) * CHUNK_SIZE - inset, 0, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5));
+    			edgePositions[2] = glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5), 0, (coord.z + 1) * CHUNK_SIZE - inset);
+    			edgePositions[3] = glm::vec3(coord.x * CHUNK_SIZE + inset, 0, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5));
 
 
-	if (coord.x == 0 && coord.z == 0) {
+    			int edgeIndex = rng() % 4;
+    			// Tree with a 20% chance
+    			if (rng() % 10 < 2) {
+    				auto tree = std::make_shared<Tree>(*treeTemplate);
+    				tree->setScale(glm::vec3(20.0f, 20.0f + (rng() % 5), 20.0f));
+    				tree->setPosition(edgePositions[edgeIndex]);
+    				chunkEntities.push_back(tree);
+    			}
 
-	    generateLightForGroup(coord, chunkEntities);
-		auto road = std::make_shared<Ground>(*roadGroundTemplate);
-		road->setPosition(glm::vec3(
-			coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-			0,
-			coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-		));
-		chunkEntities.push_back(road);
-	} else if (std::abs(coord.x) <= 1 && std::abs(coord.z) <= 1) {
-
-	    generateLightForGroup(coord, chunkEntities);
-
-
-		auto road = std::make_shared<Ground>(*roadGroundTemplate);
-		road->setPosition(glm::vec3(
-			coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-			0,
-			coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-		));
-		chunkEntities.push_back(road);
-
-		const float OFFSET = CHUNK_SIZE * 0.3f;
-		if (coord.x == -1 && coord.z == -1) {
-
-			auto spire = std::make_shared<Spire>(*spireTemplate);
-			spire->setPosition(glm::vec3(
-				coord.x * CHUNK_SIZE ,
-				-30,
-				coord.z * CHUNK_SIZE
-			));
-			chunkEntities.push_back(spire);
-		} else if (coord.x == -1 && coord.z == 1) {
-			auto tea = std::make_shared<Tea>(*teaTemplate);
-			tea->setPosition(glm::vec3(
-				coord.x * CHUNK_SIZE + OFFSET,
-				0,
-				coord.z * CHUNK_SIZE + CHUNK_SIZE - OFFSET
-			));
-			chunkEntities.push_back(tea);
-		} else if (coord.x == 1 && coord.z == -1) {
-			auto obelisk = std::make_shared<Obelisk>(*obeliskTemplate);
-			obelisk->setPosition(glm::vec3(
-				coord.x * CHUNK_SIZE + CHUNK_SIZE - OFFSET,
-				0,
-				coord.z * CHUNK_SIZE + OFFSET
-			));
-			chunkEntities.push_back(obelisk);
-		} else if (coord.x == 1 && coord.z == 1) {
-			auto aircraftCentral = std::make_shared<Aircraft>(*aircraftTemplate);
-			aircraftCentral->initialize(
-				glm::vec3(
+    		} else {
+    			auto ground = std::make_shared<Ground>(*groundTemplate);
+    			ground->setPosition(glm::vec3(
 					coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-					100,
+					0,
 					coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-				),
-				glm::vec3(30, 30, 30)
-			);
-			chunkEntities.push_back(aircraftCentral);
-		}
+				));
+    			chunkEntities.push_back(ground);
+
+    			const int numCrystals = 5 + (rng() % 10);
+    			const float centerArea = CHUNK_SIZE * 0.2f;
+    			const float baseWidth = 16.0f;
+
+    			std::vector<glm::vec2> crystalPositions;
+
+
+    			glm::vec2 centerPos(
+					coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
+					coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
+				);
+    			crystalPositions.push_back(centerPos);
+
+    			float firstHeight = 64.0f + (rng() % 128);
+    			float firstScaleX = 0.5f + (float)(rng() % 100) / 100.0f;
+    			float firstScaleZ = 0.5f + (float)(rng() % 100) / 100.0f;
+
+    			auto firstCrystal = std::make_shared<Building>(*buildingTemplates[0]);
+    			firstCrystal->setScale(glm::vec3(baseWidth * firstScaleX, firstHeight, baseWidth * firstScaleZ));
+    			firstCrystal->setPosition(glm::vec3(centerPos.x, firstHeight , centerPos.y));
+    			firstCrystal->setRotation(glm::vec3(0, 0, 0));
+    			chunkEntities.push_back(firstCrystal);
+
+    			for (int i = 1; i < numCrystals; i++) {
+    				float randomHeight = 64.0f + (rng() % 128);
+    				float randomScaleX = 0.5f + (float)(rng() % 100) / 100.0f;
+    				float randomScaleZ = 0.5f + (float)(rng() % 100) / 100.0f;
+    				auto crystal = std::make_shared<Building>(*buildingTemplates[0]);
+
+    				float angle = (float)(rng() % 360) * 3.14159f / 180.0f;
+    				float distance = (float)(rng() % (int)(centerArea));
+
+    				float offsetX = cos(angle) * distance;
+    				float offsetZ = sin(angle) * distance;
+
+    				glm::vec2 pos(
+						centerPos.x + offsetX,
+						centerPos.y + offsetZ
+					);
+
+    				glm::vec3 randomRotation(
+						0,
+						rng() % 30,
+						rng() % 5
+					);
+
+    				crystal->setScale(glm::vec3(baseWidth * randomScaleX, randomHeight, baseWidth * randomScaleZ));
+    				crystal->setPosition(glm::vec3(pos.x, randomHeight, pos.y));
+    				crystal->setRotation(randomRotation);
+    				chunkEntities.push_back(crystal);
+    			}
+
+    		}
+	    }
+
+	    currentChunks[coord] = chunkEntities;
 	}
-	else {
-		bool isRoad = isRoadFunc(coord);
-	if (isRoad) {
-		generateLightForGroup(coord, chunkEntities);
 
-
-
-		auto road = std::make_shared<Ground>(*roadGroundTemplate);
-	    road->setPosition(glm::vec3(
-	        coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-	        0,
-	        coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-	    ));
-	    chunkEntities.push_back(road);
-
-	    float height = 300.0f + (rng() % 300);
-
-	    if (rng() % 100 < AIRCRAFT_SPAWN_PROBABILITY * 100) {
-	        auto aircraft = std::make_shared<Aircraft>(*aircraftTemplate);
-	        glm::vec3 aircraftPos = glm::vec3(
-	            coord.x * CHUNK_SIZE + (rand() % CHUNK_SIZE),
-	            height,
-	            coord.z * CHUNK_SIZE + (rand() % CHUNK_SIZE)
-	        );
-	        aircraft->setPosition(aircraftPos);
-	        aircraft->setRotation(glm::vec3(0, rand() % 360, 0));
-	        chunkEntities.push_back(aircraft);
-	    }
-
-	    glm::vec3 centerPosition = glm::vec3(
-	        coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-	        0,
-	        coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-	    );
-
-		glm::vec3 edgePositions[4];
-
-		const float inset = 2.0f;
-		const float sideOffset = 5.0f;
-
-		edgePositions[0] = glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5), 0, coord.z * CHUNK_SIZE + inset);
-		edgePositions[1] = glm::vec3((coord.x + 1) * CHUNK_SIZE - inset, 0, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5));
-		edgePositions[2] = glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5), 0, (coord.z + 1) * CHUNK_SIZE - inset);
-		edgePositions[3] = glm::vec3(coord.x * CHUNK_SIZE + inset, 0, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2 + (rng() % 10 - 5));
-
-
-	    // Determine if a bot will spawn at the center (40%)
-	    if (rng() % 10 < 4) {
-	        auto bot = std::make_shared<MyBot>(*botTemplate);
-	        bot->setPosition(glm::vec3(centerPosition.x, -33, centerPosition.z));
-	        bot->setRotation(glm::vec3(0, rand() % 360, 0));
-	        chunkEntities.push_back(bot);
-	    }
-
-	    // Randomly select an edge position for a tree (20%)
-	    if (rng() % 10 < 2) {
-	        int edgeIndex = rng() % 4;
-	        auto tree = std::make_shared<Tree>(*treeTemplate);
-
-	        float randomHeight = 20.0f + (rng() % 5);
-	        tree->setScale(glm::vec3(20.0f, randomHeight, 20.0f));
-	        tree->setPosition(edgePositions[edgeIndex]);
-	        chunkEntities.push_back(tree);
-	    }
-
-        } else {
-            auto ground = std::make_shared<Ground>(*groundTemplate);
-            ground->setPosition(glm::vec3(
-                coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-                0,
-                coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-            ));
-            chunkEntities.push_back(ground);
-
-            int blockX = std::abs(coord.x) % 3;
-            int blockZ = std::abs(coord.z) % 3;
-
-
-			const int numCrystals = 5 + (rng() % 10);
-			const float centerArea = CHUNK_SIZE * 0.2f;
-			const float baseWidth = 16.0f;
-
-			std::vector<glm::vec2> crystalPositions;
-
-
-			glm::vec2 centerPos(
-			    coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
-			    coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
-			);
-			crystalPositions.push_back(centerPos);
-
-			float firstHeight = 64.0f + (rng() % 128);
-			float firstScaleX = 0.5f + (float)(rng() % 100) / 100.0f;
-			float firstScaleZ = 0.5f + (float)(rng() % 100) / 100.0f;
-
-			auto firstCrystal = std::make_shared<Building>(*buildingTemplates[0]);
-			firstCrystal->setScale(glm::vec3(baseWidth * firstScaleX, firstHeight, baseWidth * firstScaleZ));
-			firstCrystal->setPosition(glm::vec3(centerPos.x, firstHeight , centerPos.y));
-			firstCrystal->setRotation(glm::vec3(0, 0, 0));
-			chunkEntities.push_back(firstCrystal);
-
-			for (int i = 1; i < numCrystals; i++) {
-			    float randomHeight = 64.0f + (rng() % 128);
-			    float randomScaleX = 0.5f + (float)(rng() % 100) / 100.0f;
-			    float randomScaleZ = 0.5f + (float)(rng() % 100) / 100.0f;
-			    auto crystal = std::make_shared<Building>(*buildingTemplates[0]);
-
-			    float angle = (float)(rng() % 360) * 3.14159f / 180.0f;
-			    float distance = (float)(rng() % (int)(centerArea));
-
-			    float offsetX = cos(angle) * distance;
-			    float offsetZ = sin(angle) * distance;
-
-			    glm::vec2 pos(
-			        centerPos.x + offsetX,
-			        centerPos.y + offsetZ
-			    );
-
-			    glm::vec3 randomRotation(
-			        0,
-			        rng() % 30,
-			        rng() % 5
-			    );
-
-			    crystal->setScale(glm::vec3(baseWidth * randomScaleX, randomHeight, baseWidth * randomScaleZ));
-			    crystal->setPosition(glm::vec3(pos.x, randomHeight, pos.y));
-			    crystal->setRotation(randomRotation);
-			    chunkEntities.push_back(crystal);
-			}
-
-        }
-    }
-
-    currentChunks[coord] = chunkEntities;
-}
 
 	void update(const glm::vec3& cameraPos, double currentTime) {
 		ChunkCoord currentChunk = getCurrentChunk(cameraPos);
@@ -538,16 +473,10 @@ void generateChunk(const ChunkCoord& coord) {
 	}
 
 	void render(glm::mat4 vp, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, glm::vec3 eye) {
-
-
-
 		for (const auto& [coord, chunk] : currentChunks) {
-
 			LightPoint light = getClosestLight(coord);
 
-
-
-
+			// Render each entity in the chunk
 			for (auto& entity : chunk) {
 				if (auto bot = std::dynamic_pointer_cast<MyBot>(entity)) {
 					bot->setLightUniforms(light.position, light.color, eye, light.intensity);
@@ -574,22 +503,15 @@ void generateChunk(const ChunkCoord& coord) {
 					tree->setLightUniforms(light.position, light.color, eye, light.intensity);
 					tree->render(vp, eye);
 				} else if (auto sphere = std::dynamic_pointer_cast<Sphere>(entity)) {
-					sphere->setLightUniforms(light.position, light.color, eye, light.intensity);
 					sphere->render(vp, eye);
 				}
 			}
 		}
 
+	    if (!aircraftFound) {
+			findInteractableAircraft(eye);
+	    }
 
-
-		findInteractableAircraftInFrustum(eye, projectionMatrix, viewMatrix);
-
-		if (saveDepth) {
-			std::string filename = "depth_camera.png";
-			saveDepthTexture(shadowMapFBO, filename);
-			std::cout << "Depth texture saved to " << filename << std::endl;
-			saveDepth = false;
-		}
 	}
 
 	ChunkCoord getLightGroupCoord(const ChunkCoord& coord) {
@@ -602,11 +524,12 @@ void generateChunk(const ChunkCoord& coord) {
 	void generateLightForGroup(const ChunkCoord& coord, std::vector<std::shared_ptr<Entity>>& chunkEntities) {
 		ChunkCoord groupCoord = getLightGroupCoord(coord);
 
+		// Check if light already exists for this group
 		if (lightPoints.find(groupCoord) != lightPoints.end()) {
 			return;
 		}
 
-
+		// Generate light for this group
 		LightPoint light;
 		light.position = glm::vec3(
 			groupCoord.x * CHUNK_SIZE + (CHUNK_SIZE * LIGHT_GROUP_SIZE / 2),
@@ -618,6 +541,7 @@ void generateChunk(const ChunkCoord& coord) {
 
 		lightPoints[groupCoord] = light;
 
+		// Add a sphere to represent the light
 		auto sphere = std::make_shared<Sphere>(*sphereTemplate);
 		sphere->setPosition(light.position);
 		chunkEntities.push_back(sphere);
@@ -627,91 +551,41 @@ void generateChunk(const ChunkCoord& coord) {
 		return lightPoints[getLightGroupCoord(coord)];
 	}
 
-	void initializeShadowMapping() {
-        glGenFramebuffers(1, &shadowMapFBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
 
-        glGenTextures(1, &shadowMapTexture);
-        glBindTexture(GL_TEXTURE_2D, shadowMapTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-                     1024, 1024, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
-        shadowProgramID = LoadShadersFromFile("..lab2/shaders/shadow.vert", "..lab2/shaders/shadow.frag");
-
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMapTexture, 0);
-        glDrawBuffer(GL_NONE);
-        glReadBuffer(GL_NONE);
-
-    	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    	if (status != GL_FRAMEBUFFER_COMPLETE) {
-    		std::cerr << "Error framebuffer: " << status << std::endl;
-    	}
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-
-    void renderShadowMap(glm::vec3 lightPos, glm::vec3 lightLookAt) {
-        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
-        glViewport(0, 0, 1024, 1024);
-        glClear(GL_DEPTH_BUFFER_BIT);
-
-        glUseProgram(shadowProgramID);
-
-        glm::mat4 lightProjection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 100.0f);
-        glm::mat4 lightView = glm::lookAt(lightPos, lightLookAt, glm::vec3(0.0f, 1.0f, 0.0f));
-        lightSpaceMatrix = lightProjection * lightView;
-
-        GLuint lightSpaceMatrixID = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
-        glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &lightSpaceMatrix[0][0]);
-
-	    for (auto& chunk : chunks) {
-	        for (auto& entity : chunk.second) {
-				entity->renderForShadows(lightSpaceMatrix, shadowProgramID);
-
-
-	        }
-	    }
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-
-	std::shared_ptr<Aircraft> findInteractableAircraftInFrustum(
-		const glm::vec3& cameraPos,
-		const glm::mat4& projectionMatrix,
-		const glm::mat4& viewMatrix
+	std::shared_ptr<Aircraft> findInteractableAircraft(
+		const glm::vec3& cameraPos
 	) {
 		bool found = false;
-		const float INTERACTION_CUBE_SIZE = 200.0f; // Size of the interaction cube
+		const float INTERACTION_CUBE_SIZE = 200.0f;
 
 		for (const auto& [_, chunk] : currentChunks) {
 			for (auto& entity : chunk) {
+				// Verify if the entity is an aircraft
 				if (auto aircraft = std::dynamic_pointer_cast<Aircraft>(entity)) {
-					glm::vec3 aircraftPos = aircraft->getPosition();
+					// Change this condition to check for central aircraft instead
+					if (aircraft->getIsCentral()) {  // <- Modified this line
+						glm::vec3 aircraftPos = aircraft->getPosition();
 
-					// Check if camera is inside the interaction cube
-					bool insideCube =
-						cameraPos.x >= aircraftPos.x - INTERACTION_CUBE_SIZE &&
-						cameraPos.x <= aircraftPos.x + INTERACTION_CUBE_SIZE &&
-						cameraPos.y >= aircraftPos.y - INTERACTION_CUBE_SIZE &&
-						cameraPos.y <= aircraftPos.y + INTERACTION_CUBE_SIZE &&
-						cameraPos.z >= aircraftPos.z - INTERACTION_CUBE_SIZE &&
-						cameraPos.z <= aircraftPos.z + INTERACTION_CUBE_SIZE;
+						bool insideCube =
+							cameraPos.x >= aircraftPos.x - INTERACTION_CUBE_SIZE &&
+							cameraPos.x <= aircraftPos.x + INTERACTION_CUBE_SIZE &&
+							cameraPos.y >= aircraftPos.y - INTERACTION_CUBE_SIZE &&
+							cameraPos.y <= aircraftPos.y + INTERACTION_CUBE_SIZE &&
+							cameraPos.z >= aircraftPos.z - INTERACTION_CUBE_SIZE &&
+							cameraPos.z <= aircraftPos.z + INTERACTION_CUBE_SIZE;
 
-					if (insideCube) {
-						aircraft->setInteractable(true);
-						currentInteractableAircraft = aircraft;
-						found = true;
-						return aircraft;
+						if (insideCube) {
+							aircraft->setInteractable(true);
+							currentInteractableAircraft = aircraft;
+							found = true;
+							return aircraft;
+						}
 					}
 				}
 			}
 		}
 
-		// If no aircraft was found in range, disable current interactable
+		// If no aircraft was found, disable interaction with the current one
 		if (!found && currentInteractableAircraft) {
 			currentInteractableAircraft->setInteractable(false);
 			currentInteractableAircraft = nullptr;
@@ -726,10 +600,11 @@ void generateChunk(const ChunkCoord& coord) {
 		const glm::mat4& projectionMatrix
 	)
 	{
-		currentInteractableAircraft = findInteractableAircraftInFrustum(
-			cameraPos, projectionMatrix, viewMatrix
+		currentInteractableAircraft = findInteractableAircraft(
+			cameraPos
 		);
 
+		// If an aircraft was found, interact with it
 		if (currentInteractableAircraft && !aircraftFound) {
 			currentInteractableAircraft->onInteract();
 			aircraftFound = true;
