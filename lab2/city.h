@@ -157,11 +157,11 @@ struct InfiniteCity {
 	std::shared_ptr<Obelisk> obeliskTemplate;
 	std::shared_ptr<Spire> spireTemplate;
 	std::shared_ptr<Tea> teaTemplate;
-
 	std::shared_ptr<Tree> treeTemplate;
-
-	//sphere template
 	std::shared_ptr<Sphere> sphereTemplate;
+
+	std::shared_ptr<Aircraft> centralAircraftTemplate;
+
 
 
 
@@ -172,7 +172,7 @@ struct InfiniteCity {
     const int CHUNK_SIZE = 192 * 2;        // Size of chunk
     const int RENDER_DISTANCE = 10;      // How many chunks to render in each direction
 
-	const float AIRCRAFT_SPAWN_PROBABILITY = 0.05f;
+	const float AIRCRAFT_SPAWN_PROBABILITY = 0.04f;
 
 	std::vector<std::shared_ptr<Entity>> currentEntities;
 
@@ -269,6 +269,13 @@ struct InfiniteCity {
 			glm::vec3(2, 2, 2)
 		);
 
+		centralAircraftTemplate = std::make_shared<Aircraft>(*aircraftTemplate);
+		centralAircraftTemplate->initialize(
+			glm::vec3(0, 0, 0),
+			glm::vec3(30, 30, 30),
+			true
+		);
+
 
 
 	}
@@ -324,9 +331,9 @@ struct InfiniteCity {
 	            obelisk->setPosition(glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE - OFFSET, 0, coord.z * CHUNK_SIZE + OFFSET));
 	            chunkEntities.push_back(obelisk);
 	        } else if (coord.x == 1 && coord.z == 1) {
-	            auto aircraftCentral = std::make_shared<Aircraft>(*aircraftTemplate);
-	            aircraftCentral->initialize(glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2, 100, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2), glm::vec3(30, 30, 30), true);
-	            chunkEntities.push_back(aircraftCentral);
+	            auto aircraftCentral = std::make_shared<Aircraft>(*centralAircraftTemplate);
+                aircraftCentral->setPosition(glm::vec3(coord.x * CHUNK_SIZE + CHUNK_SIZE / 2, 100, coord.z * CHUNK_SIZE + CHUNK_SIZE / 2));
+	        	chunkEntities.push_back(aircraftCentral);
 	        }
 	    }
 	    // Generate city chunks
@@ -406,6 +413,7 @@ struct InfiniteCity {
     			auto firstCrystal = std::make_shared<Building>(*buildingTemplates[0]);
     			firstCrystal->setScale(glm::vec3(baseWidth * firstScaleX, firstHeight, baseWidth * firstScaleZ));
     			firstCrystal->setPosition(glm::vec3(centerPos.x, firstHeight , centerPos.y));
+    			firstCrystal->setRotation(glm::vec3(0, rng() % 360, 0));
     			chunkEntities.push_back(firstCrystal);
 
     			for (int i = 1; i < numCrystals; i++) {
@@ -427,14 +435,14 @@ struct InfiniteCity {
 
     				glm::vec3 randomRotation(
 						0,
-						rng() % 30,
-						rng() % 5
+						rng() % 360,
+						0
 					);
 
     				crystal->setScale(glm::vec3(baseWidth * randomScaleX, randomHeight, baseWidth * randomScaleZ));
     				crystal->setPosition(glm::vec3(pos.x, randomHeight, pos.y));
     				crystal->setRotation(randomRotation);
-    				//chunkEntities.push_back(crystal);
+    				chunkEntities.push_back(crystal);
     			}
 
     		}
@@ -630,8 +638,7 @@ struct InfiniteCity {
 
 		for (const auto& [coord, _] : currentChunks) {
 			if ((std::abs(coord.x - currentChunk.x) > RENDER_DISTANCE + 1 ||
-				std::abs(coord.z - currentChunk.z) > RENDER_DISTANCE + 1) &&
-					!(coord.x == 0 && coord.z == 0))
+				std::abs(coord.z - currentChunk.z) > RENDER_DISTANCE + 1))
 				{
 				chunksToRemove.push_back(coord);
 				lightPoints.erase(getLightGroupCoord(coord));

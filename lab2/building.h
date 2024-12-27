@@ -280,6 +280,9 @@ struct Building : public Entity{
 		glUseProgram(programID);
 		glBindVertexArray(vertexArrayID);
 
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
@@ -313,6 +316,8 @@ struct Building : public Entity{
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
         glDisableVertexAttribArray(2);
+
+		glDisable(GL_BLEND);
 	}
 
 

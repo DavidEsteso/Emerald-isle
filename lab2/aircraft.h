@@ -102,7 +102,7 @@ GLuint LoadTextureAir(const std::string& path) {
 
 }
 
-float cameraSpeed = 30.0f;
+float cameraSpeed = 10.0f;
 float minHeight = 2.0f;
 float maxHeight = 10.0f;
 
@@ -136,12 +136,7 @@ struct Aircraft : public Entity {
     float floatSpeed;
     glm::vec3 basePosition;
 
-    struct MovementRange {
-        float minHeight;
-        float maxHeight;
-        float primaryScale;
-        float secondaryScale;
-    } moveRange;
+
 
     bool isInteractable = false;
     bool central = false;
@@ -175,17 +170,11 @@ struct Aircraft : public Entity {
 
         const char* materialBaseDir = "../lab2/models/air";
 
-        floatAmplitude = 2.0f;
+        floatAmplitude = 1.5f;
         floatScale = 1.5f;
         floatSpeed = 0.5f;
         currentTime = 0.0f;
         animationDuration = 6.0f;
-
-        moveRange.minHeight = -5.0f;
-        moveRange.maxHeight = 5.0f;
-        moveRange.primaryScale = 1.5f;
-        moveRange.secondaryScale = 0.3f;
-
 
 
         tinyobj::attrib_t attrib;

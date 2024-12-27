@@ -41,7 +41,9 @@ const char* skyTexturePaths[6] = {
 	"../lab2/textures/cube_up.png",
 	"../lab2/textures/cube_down.png"
 };
-
+float smoothStep(float x) {
+	return x * x * (3 - 2 * x); // Función de suavizado
+}
 
 int main(void)
 {
@@ -58,7 +60,7 @@ int main(void)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow(1024 * 2, 768 * 2 , "Emerald Isle", NULL, NULL);
+	window = glfwCreateWindow(1024 , 768  , "Emerald Isle", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cerr << "Failed to open a GLFW window." << std::endl;
@@ -72,7 +74,7 @@ int main(void)
 	glfwSetKeyCallback(window, key_callback);
 
 	glfwSetCursorPosCallback(window, mouse_callback);
-	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 
 
@@ -89,6 +91,7 @@ int main(void)
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
+	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);;
 
@@ -156,9 +159,8 @@ int main(void)
 	unsigned long frames = 0;
 
 	bool hasInteracted = false;
-	float cameraWobblePhase = 0.0f;
-	const float WOBBLE_SPEED = 2.0f;
-	const float WOBBLE_AMOUNT = 0.0005f;
+
+
 
 	do
 	{
@@ -167,12 +169,6 @@ int main(void)
         double currentTime = glfwGetTime();
         float deltaTime = float(currentTime - lastTime);
 		lastTime = currentTime;
-
-
-		if (hasInteracted) {
-			cameraWobblePhase += deltaTime * WOBBLE_SPEED;
-			eye_center.y += sin(cameraWobblePhase) * WOBBLE_AMOUNT;
-		}
 
 
 		viewMatrix = glm::lookAt(eye_center, lookat, up);
@@ -210,7 +206,7 @@ int main(void)
 			fTime = 0;
 
 			std::stringstream stream;
-			stream << std::fixed << std::setprecision(2) << "Lab 4 | Frames per second (FPS): " << fps;
+			stream << std::fixed << std::setprecision(2) << "Frames per second (FPS): " << fps;
 
 			glfwSetWindowTitle(window, stream.str().c_str());
 
@@ -231,7 +227,7 @@ int main(void)
 	return 0;
 }
 
-float mouseSensitivity = 0.3f;
+float mouseSensitivity = 0.4f;
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 	int windowWidth, windowHeight;
@@ -271,8 +267,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 }
 
 
-
-
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
     // Camera movement with WASD
@@ -296,25 +290,31 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         lookat += cameraSpeed * right;
     }
 
-	if (isCameraMoving)
-	{
-		if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-			if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
-				eye_center.y += cameraSpeed;
-				eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
-				lookat.y = eye_center.y;
-			}
-			if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
-				eye_center.y -= cameraSpeed;
-				eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
-				lookat.y = eye_center.y;
-			}
-		}
-	}
+    if (isCameraMoving)
+    {
+        if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+            if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
+                glm::vec3 viewDir = glm::normalize(lookat - eye_center);
+
+                eye_center.y += cameraSpeed;
+                eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
+
+                // Update lookat position maintaining the same view direction
+                lookat = eye_center + viewDir;
+            }
+            if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS)) {
+                glm::vec3 viewDir = glm::normalize(lookat - eye_center);
+
+                eye_center.y -= cameraSpeed;
+                eye_center.y = glm::clamp(eye_center.y, minHeight, maxHeight);
+
+                // Update lookat position maintaining the same view direction
+                lookat = eye_center + viewDir;
+            }
+        }
+    }
 
     // Escape to close window
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
-
-
 }
