@@ -23,8 +23,8 @@
 
 
 struct Sky {
-	glm::vec3 position;		// Position of the box
-	glm::vec3 scale;		// Size of the box in each axis
+	glm::vec3 position;
+	glm::vec3 scale;
 
 	GLfloat vertex_buffer_data[72] = {
 		// Front face (internal)
@@ -89,10 +89,10 @@ struct Sky {
     // TODO: Define UV buffer data--DONE
 	GLfloat uv_buffer_data[48] = {
 		// Front face
-		0.0f, 0.0f,  // Bottom-left
-		0.0f, 1.0f,  // Top-left
-		1.0f, 1.0f,  // Top-right
-		1.0f, 0.0f,  // Bottom-right
+		0.0f, 0.0f,
+		0.0f, 1.0f,
+		1.0f, 1.0f,
+		1.0f, 0.0f,
 
 		// Back face
 		0.0f, 0.0f,
@@ -126,15 +126,12 @@ struct Sky {
 		1.0f, 1.0f
 	};
 
-    // ---------------------------
 
-	// OpenGL buffers
     GLuint vertexArrayID;
     GLuint vertexBufferID;
     GLuint indexBufferID;
     GLuint cubemapTextureID;
 
-    // Shader variable IDs
     GLuint mvpMatrixID;
     GLuint programID;
 
@@ -171,7 +168,7 @@ struct Sky {
     void render(glm::mat4 cameraMatrix) {
         glUseProgram(programID);
         glBindVertexArray(vertexArrayID);
-    	glDepthFunc(GL_LEQUAL);  // Change depth function
+    	glDepthFunc(GL_LEQUAL);
     	glDepthMask(GL_FALSE);
 
 
@@ -199,7 +196,7 @@ struct Sky {
         // Cleanup
         glDisableVertexAttribArray(0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-    	glDepthFunc(GL_LESS);    // Restore default depth function
+    	glDepthFunc(GL_LESS);
     	glDepthMask(GL_TRUE);
 
     }
@@ -209,8 +206,6 @@ struct Sky {
 		glDeleteBuffers(1, &indexBufferID);
 		glDeleteVertexArrays(1, &vertexArrayID);
 		glDeleteTextures(1, &cubemapTextureID);
-
-
 	}
 	glm::vec3 getPosition() const {
 		return position;

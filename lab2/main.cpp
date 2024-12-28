@@ -33,14 +33,7 @@ float yaw = glm::degrees(atan2(front.z, front.x));
 
 float pitch = glm::degrees(asin(front.y));
 
-const char* skyTexturePaths[6] = {
-	"../lab2/textures/cube_front.png",
-	"../lab2/textures/cube_back.png",
-	"../lab2/textures/cube_left.png",
-	"../lab2/textures/cube_right.png",
-	"../lab2/textures/cube_up.png",
-	"../lab2/textures/cube_down.png"
-};
+
 float smoothStep(float x) {
 	return x * x * (3 - 2 * x); // Función de suavizado
 }
@@ -96,51 +89,13 @@ int main(void)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);;
 
 
-	float width = 16.0f;
-	float depth = 16.0f;
-	float height = 80.0f;
-
-
 
 	float currentTime = 0.0f;
-	//city.initializeShadowMapping();
 	InfiniteCity city(window);
 
 
-	Tree tree;
-	glm::vec3 tree_position = glm::vec3(eye_center.x + front.x * 50.0f, 100, eye_center.z + front.z * 50.0f);
-	tree.initialize(tree_position, glm::vec3(50.0f, 50.0f, 50.0f));
-
-	//Building b;
-	//b.initialize(tree_position, glm::vec3(32.0f, 32.0f, 32.0f), "../lab2/textures/cube_");
-
-	//Ground ground;
-	//ground.initialize(tree_position, glm::vec3(500.0f, 500.0f, 500.0f), "../lab2/textures/facade1.jpg");
-
-	//Aircraft aircraft;
-	//glm::vec3 aircraft_pos = eye_center + front * 350.0f;
-	//aircraft.initialize(aircraft_pos, glm::vec3(50.0f, 50.0f, 50.0f));
-
 	Sky sky;
 	sky.initialize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(2000.0f, 2000.0f, 2000.0f), "../lab2/textures/cube_");
-
-	//MyBot bot;
-	//bot.initialize(tree_position, glm::vec3(1, 1, 1));
-
-
-	//Tea tea;
-	//tea.initialize(tree_position, glm::vec3(1, 1, 1));
-
-	//Spire spire;
-	//spire.initialize(tree_position, glm::vec3(1, 1, 1));
-	//spire.setScale(glm::vec3(0.2,0.2,0.2));
-
-	//Obelisc obelisc;
-	//obelisc.initialize(tree_position, glm::vec3(1, 1, 1));
-
-
-
-
 
 	// Camera setup
     eye_center.y = viewDistance * cos(viewPolar);
@@ -150,7 +105,7 @@ int main(void)
 	glm::mat4 viewMatrix, projectionMatrix, viewMatrixSky;
     glm::float32 FoV = 45;
 	glm::float32 zNear = 0.1f;
-	glm::float32 zFar = 8000.0f;
+	glm::float32 zFar = 6000.0f;
 	projectionMatrix = glm::perspective(glm::radians(FoV), 4.0f / 3.0f, zNear, zFar);
 
 	static double lastTime = glfwGetTime();
@@ -194,8 +149,6 @@ int main(void)
 			}
 		}
 
-
-
 		frames++;
 		fTime += deltaTime;
 		if (fTime > 2.0f)
@@ -220,6 +173,8 @@ int main(void)
 
 	// Clean up
 	city.cleanup();
+
+	sky.cleanup();
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();

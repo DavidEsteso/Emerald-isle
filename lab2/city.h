@@ -40,7 +40,7 @@
 
 
 // OpenGL camera view parameters
-static glm::vec3 eye_center(0.0f, -100.0f, 0.0f); // Position the camera inside the cube
+static glm::vec3 eye_center(0.0f, 0.0f, 0.0f); // Position the camera inside the cube
 static glm::vec3 lookat(0, 1, 1);
 static glm::vec3 up(0, 1, 0);
 
@@ -340,7 +340,7 @@ struct InfiniteCity {
 	    else
 	    {
 		    bool isRoad = isRoadFunc(coord);
-
+			// Generate the road
     		if (isRoad) {
     			generateLightForGroup(coord, chunkEntities);
     			auto road = std::make_shared<Ground>(*roadGroundTemplate);
@@ -383,7 +383,7 @@ struct InfiniteCity {
     				tree->setPosition(edgePositions[edgeIndex]);
     				chunkEntities.push_back(tree);
     			}
-
+			// Emeralds out of the road
     		} else {
     			auto ground = std::make_shared<Ground>(*groundTemplate);
     			ground->setPosition(glm::vec3(
@@ -399,7 +399,6 @@ struct InfiniteCity {
 
     			std::vector<glm::vec2> crystalPositions;
 
-
     			glm::vec2 centerPos(
 					coord.x * CHUNK_SIZE + CHUNK_SIZE / 2,
 					coord.z * CHUNK_SIZE + CHUNK_SIZE / 2
@@ -410,12 +409,14 @@ struct InfiniteCity {
     			float firstScaleX = 0.5f + (float)(rng() % 100) / 100.0f;
     			float firstScaleZ = 0.5f + (float)(rng() % 100) / 100.0f;
 
+				// First crystal
     			auto firstCrystal = std::make_shared<Building>(*buildingTemplates[0]);
     			firstCrystal->setScale(glm::vec3(baseWidth * firstScaleX, firstHeight, baseWidth * firstScaleZ));
     			firstCrystal->setPosition(glm::vec3(centerPos.x, firstHeight , centerPos.y));
     			firstCrystal->setRotation(glm::vec3(0, rng() % 360, 0));
     			chunkEntities.push_back(firstCrystal);
 
+				// Generate the rest of the crystals
     			for (int i = 1; i < numCrystals; i++) {
     				float randomHeight = 64.0f + (rng() % 128);
     				float randomScaleX = 0.5f + (float)(rng() % 100) / 100.0f;
@@ -455,6 +456,7 @@ struct InfiniteCity {
 	void update(const glm::vec3& cameraPos, double currentTime) {
 		ChunkCoord currentChunk = getCurrentChunk(cameraPos);
 
+		// Load chunks in a square around the current chunk
 		for (int dx = -RENDER_DISTANCE; dx <= RENDER_DISTANCE; ++dx) {
 			for (int dz = -RENDER_DISTANCE; dz <= RENDER_DISTANCE; ++dz) {
 				ChunkCoord chunkToLoad = {
@@ -467,7 +469,7 @@ struct InfiniteCity {
 				}
 			}
 		}
-
+		// Update bot animation
 		for (auto& [coord, entities] : currentChunks) {
 			for (auto& entity : entities) {
 				if (auto bot = std::dynamic_pointer_cast<MyBot>(entity)) {

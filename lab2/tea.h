@@ -35,13 +35,6 @@ struct Tea : public Entity {
     GLuint modelMatrixID;
     GLuint viewPosID;
 
-    GLuint depthMapFBO;
-    GLuint shadowMapTexture;
-    GLuint shadowProgramID;
-    GLuint lightSpaceMatrixID;
-    GLuint lightSpaceMatrixID2;
-    GLuint shadowMapID;
-    glm::mat4 lightSpaceMatrix;
 
     void initialize(glm::vec3 pos, glm::vec3 scl) {
         position = pos;
@@ -131,20 +124,11 @@ struct Tea : public Entity {
         }
         initLightUniforms();
 
-        shadowProgramID = LoadShadersFromFile("../lab2/shaders/shadow.vert", "../lab2/shaders/shadow.frag");
-        if (shadowProgramID == 0) {
-            std::cerr << "Failed to load shadow shaders." << std::endl;
-            return;
-        }
 
 
         // Get uniform locations
         mvpMatrixID = glGetUniformLocation(programID, "MVP");
         modelMatrixID = glGetUniformLocation(programID, "model");
-        viewPosID = glGetUniformLocation(programID, "viewPos");
-        lightSpaceMatrixID2 = glGetUniformLocation(programID, "lightSpaceMatrix");
-        shadowMapID = glGetUniformLocation(programID, "shadowMap");
-        lightSpaceMatrixID = glGetUniformLocation(shadowProgramID, "lightSpaceMatrix");
 
         // Correct rotation
         rotation.z = 90.0f;
@@ -180,7 +164,6 @@ struct Tea : public Entity {
         // Set uniforms
         glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
         glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
-        glUniform3fv(viewPosID, 1, &cameraPos[0]);
 
         setRotation(glm::vec3(90.0f, 90.0f, rotation.z));
 

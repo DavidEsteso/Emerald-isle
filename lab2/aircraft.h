@@ -99,7 +99,6 @@ GLuint LoadTextureAir(const std::string& path) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, defaultColor);
     }
     return textureID;
-
 }
 
 float cameraSpeed = 10.0f;
@@ -154,8 +153,6 @@ struct Aircraft : public Entity {
         maxHeight = 1000.0f;
         isCameraMoving = true;
     }
-
-
 
     bool getIsCentral() {
         return central;
@@ -259,7 +256,6 @@ struct Aircraft : public Entity {
 
         mvpMatrixID = glGetUniformLocation(programID, "MVP");
         modelMatrixID = glGetUniformLocation(programID, "model");
-        viewPosID = glGetUniformLocation(programID, "viewPos");
     }
 
 
@@ -392,12 +388,6 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
         lastMaterialID = currentMaterialID;
     }
 
-    GLint contourUniformLocation = glGetUniformLocation(programID, "enableContour");
-    GLint viewPosLocation = glGetUniformLocation(programID, "viewPos");
-
-    glUniform3fv(viewPosLocation, 1, &cameraPos[0]);
-
-    glUniform1i(contourUniformLocation, isInteractable ? 0 : 0);
 
     size_t count = material_indices.size() - startIndex;
     glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)(startIndex * sizeof(unsigned int)));
@@ -462,8 +452,6 @@ void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
 
 
     }
-
-
 
 };
 

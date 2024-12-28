@@ -131,11 +131,6 @@ struct Sphere : public Entity {
         // Get uniform locations
         mvpMatrixID = glGetUniformLocation(programID, "MVP");
         modelMatrixID = glGetUniformLocation(programID, "model");
-        viewPosID = glGetUniformLocation(programID, "viewPos");
-
-
-
-
     }
 
     void render(glm::mat4 viewProjectionMatrix, glm::vec3 cameraPos) {
@@ -166,7 +161,6 @@ struct Sphere : public Entity {
         // Set uniforms
         glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
         glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMatrix[0][0]);
-        glUniform3fv(viewPosID, 1, &cameraPos[0]);
 
         setRotation(glm::vec3(90.0f, 90.0f, rotation.z));
         float time = glfwGetTime();
